@@ -29,7 +29,7 @@ export function IngredientsDatabase() {
   const [enabledUsdaSearch, setEnabledUsdaSearch] = useState(false);
   const usdaSearchQuery = trpc.ingredient.searchExternal.useQuery(
     { query: usdaQuery },
-    { enabled: enabledUsdaSearch && usdaQuery.length >= 2 },
+    { enabled: enabledUsdaSearch && usdaQuery.length >= 2 }
   );
   const importMutation = trpc.ingredient.importExternal.useMutation({
     onSuccess: () => {
@@ -102,16 +102,14 @@ export function IngredientsDatabase() {
 
   // Filter ingredients
   const filteredIngredients = ingredients.filter((ing: { name: string }) =>
-    ing.name.toLowerCase().includes(searchFilter.toLowerCase()),
+    ing.name.toLowerCase().includes(searchFilter.toLowerCase())
   );
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl">Ingredients Database</h2>
-        <p className="text-slate-500">
-          Manage your custom ingredients and search USDA API
-        </p>
+        <p className="text-slate-500">Manage your custom ingredients and search USDA API</p>
       </div>
 
       <Tabs defaultValue="browse" className="space-y-4">
@@ -149,9 +147,7 @@ export function IngredientsDatabase() {
             <CardContent>
               <div className="space-y-2">
                 {isLoading ? (
-                  <div className="text-center py-8 text-slate-500">
-                    Loading...
-                  </div>
+                  <div className="text-center py-8 text-slate-500">Loading...</div>
                 ) : filteredIngredients.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">
                     {searchFilter
@@ -159,55 +155,43 @@ export function IngredientsDatabase() {
                       : "No ingredients yet. Add some using the tabs above."}
                   </div>
                 ) : (
-                  filteredIngredients.map(
-                    (ingredient: (typeof ingredients)[0]) => (
-                      <div
-                        key={ingredient.id}
-                        className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <div className="text-slate-900">
-                              {ingredient.name}
-                            </div>
-                            <Badge
-                              variant={
-                                ingredient.source === "USDA"
-                                  ? "default"
-                                  : "outline"
-                              }
-                            >
-                              {ingredient.source}
-                            </Badge>
-                          </div>
-                          <div className="text-slate-500 mt-1">
-                            {ingredient.servingSize} {ingredient.servingUnit}
-                          </div>
-                          <div className="flex gap-4 mt-2 text-slate-600">
-                            <span>{ingredient.calories} cal</span>
-                            <span>P: {ingredient.protein}g</span>
-                            <span>C: {ingredient.carbs}g</span>
-                            <span>F: {ingredient.fat}g</span>
-                          </div>
+                  filteredIngredients.map((ingredient: (typeof ingredients)[0]) => (
+                    <div
+                      key={ingredient.id}
+                      className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="text-slate-900">{ingredient.name}</div>
+                          <Badge variant={ingredient.source === "USDA" ? "default" : "outline"}>
+                            {ingredient.source}
+                          </Badge>
                         </div>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              handleDeleteIngredient(ingredient.id)
-                            }
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <div className="text-slate-500 mt-1">
+                          {ingredient.servingSize} {ingredient.servingUnit}
+                        </div>
+                        <div className="flex gap-4 mt-2 text-slate-600">
+                          <span>{ingredient.calories} cal</span>
+                          <span>P: {ingredient.protein}g</span>
+                          <span>C: {ingredient.carbs}g</span>
+                          <span>F: {ingredient.fat}g</span>
                         </div>
                       </div>
-                    ),
-                  )
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm">
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteIngredient(ingredient.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
             </CardContent>
@@ -323,9 +307,7 @@ export function IngredientsDatabase() {
                   <Button
                     onClick={handleUSDASearch}
                     className="bg-rose-600 hover:bg-rose-700"
-                    disabled={
-                      usdaSearchQuery.isLoading || !apiSearchQuery.trim()
-                    }
+                    disabled={usdaSearchQuery.isLoading || !apiSearchQuery.trim()}
                   >
                     <Search className="h-4 w-4 mr-2" />
                     {usdaSearchQuery.isLoading ? "Searching..." : "Search"}
@@ -338,12 +320,10 @@ export function IngredientsDatabase() {
 
               {/* API Configuration Notice */}
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="text-green-900">
-                  ✓ USDA FoodData Central API Configured
-                </div>
+                <div className="text-green-900">✓ USDA FoodData Central API Configured</div>
                 <p className="text-green-700 mt-1">
-                  Your API key is ready to use. Search for foods from the
-                  comprehensive USDA database.
+                  Your API key is ready to use. Search for foods from the comprehensive USDA
+                  database.
                 </p>
                 <p className="text-green-600 mt-2">
                   Learn more at{" "}
@@ -362,35 +342,25 @@ export function IngredientsDatabase() {
               {(apiError || usdaSearchQuery.error) && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                   <div className="text-red-900">Error</div>
-                  <p className="text-red-700 mt-1">
-                    {apiError || usdaSearchQuery.error?.message}
-                  </p>
+                  <p className="text-red-700 mt-1">{apiError || usdaSearchQuery.error?.message}</p>
                 </div>
               )}
 
               {/* Search Results */}
               {usdaSearchQuery.data && usdaSearchQuery.data.length > 0 && (
                 <div className="space-y-2">
-                  <Label>
-                    Search Results ({usdaSearchQuery.data.length} items)
-                  </Label>
+                  <Label>Search Results ({usdaSearchQuery.data.length} items)</Label>
                   {usdaSearchQuery.data.map((result) => (
                     <div
                       key={result.fdcId}
                       className="flex items-center justify-between p-4 border border-slate-200 rounded-lg bg-slate-50"
                     >
                       <div>
-                        <div className="text-slate-900">
-                          {result.description}
-                        </div>
+                        <div className="text-slate-900">{result.description}</div>
                         {result.brandOwner && (
-                          <div className="text-slate-500 mt-1">
-                            {result.brandOwner}
-                          </div>
+                          <div className="text-slate-500 mt-1">{result.brandOwner}</div>
                         )}
-                        <div className="text-slate-500 mt-1">
-                          Per 100g serving (USDA standard)
-                        </div>
+                        <div className="text-slate-500 mt-1">Per 100g serving (USDA standard)</div>
                       </div>
                       <Button
                         onClick={() => handleAddFromUSDA(result.fdcId)}

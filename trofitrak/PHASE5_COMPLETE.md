@@ -1,16 +1,19 @@
 # Phase 5 Complete: Authentication
 
 ## Summary
+
 Added Auth.js (NextAuth v5) authentication with email magic links via Resend. Replaced `DEFAULT_USER_ID` with real session-based authentication.
 
 ## Changes Made
 
 ### 1. Database Schema
+
 - Added `User` model with relations to all data models (`Ingredient`, `Recipe`, `MealPlanWeek`, `ShoppingListState`, `InBodyScan`)
 - Added Auth.js required tables: `Account`, `Session`, `VerificationToken`
 - All user data has `onDelete: Cascade` (deleting user deletes their data)
 
 ### 2. Authentication Setup
+
 - **Provider**: Resend email magic links (passwordless)
 - **Session**: JWT-based (stateless)
 - **Configuration**: [src/server/auth.ts](src/server/auth.ts)
@@ -19,17 +22,20 @@ Added Auth.js (NextAuth v5) authentication with email magic links via Resend. Re
   - Custom login page at `/login`
 
 ### 3. tRPC Context
+
 - **Before**: Hardcoded `DEFAULT_USER_ID = "default-user"`
 - **After**: [src/server/trpc/context.ts](src/server/trpc/context.ts) calls `auth()` to get session
 - Throws `UNAUTHORIZED` error if session missing
 - All tRPC procedures now require authentication
 
 ### 4. Route Protection
+
 - **Middleware**: [middleware.ts](middleware.ts) protects all routes
 - Public routes: `/login`, `/api/auth/*`
 - Redirects unauthenticated users to `/login` with callback URL
 
 ### 5. UI Components
+
 - **Login page**: [src/app/login/page.tsx](src/app/login/page.tsx)
   - Email input form
   - Shows "Check your email" confirmation
@@ -39,6 +45,7 @@ Added Auth.js (NextAuth v5) authentication with email magic links via Resend. Re
   - Added to header in [src/app/layout.tsx](src/app/layout.tsx)
 
 ### 6. Type Definitions
+
 - [types/next-auth.d.ts](types/next-auth.d.ts) extends session to include `user.id`
 
 ## Environment Variables Required
@@ -65,6 +72,7 @@ pnpm prisma:migrate --name auth_user
 ```
 
 This will:
+
 - Create `User`, `Account`, `Session`, `VerificationToken` tables
 - Add `userId` foreign keys to all existing tables
 - **WARNING**: Existing data will need a user association (see below)
@@ -72,19 +80,22 @@ This will:
 ## Testing Instructions
 
 1. **Setup environment**:
+
    ```bash
    # Generate auth secret
    openssl rand -base64 32
-   
+
    # Add to .env.local with AUTH_SECRET, AUTH_RESEND_KEY, AUTH_URL
    ```
 
 2. **Run migration**:
+
    ```bash
    pnpm prisma:migrate --name auth_user
    ```
 
 3. **Start dev server**:
+
    ```bash
    pnpm dev
    ```
@@ -129,6 +140,7 @@ All queries now automatically scope to the authenticated user:
 ## Next Steps (Not Included)
 
 Per project requirements, Phase 5 completes authentication. **Do not add**:
+
 - User profiles
 - Team features
 - Role-based permissions

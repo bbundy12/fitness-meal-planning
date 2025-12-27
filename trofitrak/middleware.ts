@@ -7,8 +7,7 @@ export async function middleware(request: NextRequest) {
 
   // Allow public access to auth routes and login page
   const isAuthRoute =
-    request.nextUrl.pathname.startsWith("/api/auth") ||
-    request.nextUrl.pathname === "/login";
+    request.nextUrl.pathname.startsWith("/api/auth") || request.nextUrl.pathname === "/login";
 
   if (isAuthRoute) {
     return NextResponse.next();

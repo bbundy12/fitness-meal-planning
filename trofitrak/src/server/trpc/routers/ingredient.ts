@@ -1,10 +1,6 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../trpc";
-import {
-  searchFoods,
-  getFoodDetails,
-  mapNutrientsToMacros,
-} from "../../providers/usda";
+import { searchFoods, getFoodDetails, mapNutrientsToMacros } from "../../providers/usda";
 
 const ingredientInputSchema = z.object({
   name: z.string().min(1),
@@ -43,23 +39,21 @@ export const ingredientRouter = router({
       });
     }),
 
-  create: publicProcedure
-    .input(ingredientInputSchema)
-    .mutation(async ({ ctx, input }) => {
-      return ctx.db.ingredient.create({
-        data: {
-          userId: ctx.userId,
-          ...input,
-        },
-      });
-    }),
+  create: publicProcedure.input(ingredientInputSchema).mutation(async ({ ctx, input }) => {
+    return ctx.db.ingredient.create({
+      data: {
+        userId: ctx.userId,
+        ...input,
+      },
+    });
+  }),
 
   update: publicProcedure
     .input(
       z.object({
         id: z.string(),
         data: ingredientInputSchema.partial(),
-      }),
+      })
     )
     .mutation(async ({ ctx, input }) => {
       return ctx.db.ingredient.update({
@@ -71,16 +65,14 @@ export const ingredientRouter = router({
       });
     }),
 
-  delete: publicProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      return ctx.db.ingredient.delete({
-        where: {
-          id: input.id,
-          userId: ctx.userId,
-        },
-      });
-    }),
+  delete: publicProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
+    return ctx.db.ingredient.delete({
+      where: {
+        id: input.id,
+        userId: ctx.userId,
+      },
+    });
+  }),
 
   /**
    * searchExternal: Search USDA FoodData Central for ingredients
@@ -90,7 +82,7 @@ export const ingredientRouter = router({
     .input(
       z.object({
         query: z.string().min(2).max(100),
-      }),
+      })
     )
     .query(async ({ input }) => {
       return searchFoods(input.query);
@@ -105,7 +97,7 @@ export const ingredientRouter = router({
     .input(
       z.object({
         fdcId: z.number().int().positive(),
-      }),
+      })
     )
     .mutation(async ({ ctx, input }) => {
       const sourceId = String(input.fdcId);

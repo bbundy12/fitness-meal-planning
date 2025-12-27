@@ -5,13 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -47,8 +41,7 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-600">
-              Click the link in the email to sign in. The link will expire in 24
-              hours.
+              Click the link in the email to sign in. The link will expire in 24 hours.
             </p>
           </CardContent>
         </Card>
@@ -61,9 +54,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Sign in to TrofiTrak</CardTitle>
-          <CardDescription>
-            Enter your email to receive a magic link
-          </CardDescription>
+          <CardDescription>Enter your email to receive a magic link</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

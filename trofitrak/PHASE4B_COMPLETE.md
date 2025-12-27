@@ -8,6 +8,7 @@
 ## Overview
 
 Phase 4B adds **USDA FoodData Central integration** to TroFiTrak, enabling users to:
+
 - Search the USDA database for ingredients
 - Import nutritional data with one click
 - All imported ingredients are editable like manual entries
@@ -22,11 +23,13 @@ This phase implements **server-side API calls** through tRPC, keeping the USDA A
 ### 1. Environment Configuration
 
 **Added to `.env.example`:**
+
 ```env
 USDA_API_KEY="your_key_here"
 ```
 
 **Updated `src/env.ts`:**
+
 ```typescript
 const envSchema = z.object({
   DATABASE_URL: z.string().url(),
@@ -36,6 +39,7 @@ const envSchema = z.object({
 ```
 
 **Key Design Decisions:**
+
 - USDA_API_KEY is required (fails fast if missing)
 - Validated via Zod on server startup
 - Never exposed to client
@@ -44,10 +48,11 @@ const envSchema = z.object({
 ### 2. Database Schema Updates
 
 **Updated `Ingredient` model in Prisma:**
+
 ```prisma
 model Ingredient {
   // ... existing fields ...
-  
+
   source          IngredientSource @default(MANUAL)
   sourceId        String?
 
@@ -59,6 +64,7 @@ model Ingredient {
 ```
 
 **Why this matters:**
+
 - `@@unique([userId, source, sourceId])` prevents duplicate imports
 - User can't accidentally import "Chicken Breast" (fdcId: 171477) twice
 - Postgres enforces uniqueness at the database level
@@ -70,44 +76,54 @@ model Ingredient {
 **Created: `src/server/providers/usda.ts`**
 
 #### **searchFoods(query: string)**
+
 Searches USDA FoodData Central database:
+
 ```typescript
 const results = await searchFoods("chicken breast");
 // Returns: [{ fdcId: 171477, description: "Chicken, broilers or fryers, breast, meat only, raw", brandOwner?: string }]
 ```
 
 **API Details:**
+
 - Endpoint: `https://api.nal.usda.gov/fdc/v1/foods/search`
 - Query params: `api_key`, `query`, `pageSize=20`
 - Data types filtered: Foundation, SR Legacy, Survey (FNDDS)
 - Returns top 20 results
 
 #### **getFoodDetails(fdcId: number)**
+
 Fetches detailed nutrition for a specific food:
+
 ```typescript
 const details = await getFoodDetails(171477);
 // Returns: { fdcId, description, brandOwner?, foodNutrients: [...] }
 ```
 
 **API Details:**
+
 - Endpoint: `https://api.nal.usda.gov/fdc/v1/food/{fdcId}`
 - Returns full nutrient breakdown
 - Used when importing to get complete macros
 
 #### **mapNutrientsToMacros(nutrients)**
+
 Converts USDA nutrients to our ingredient format:
+
 ```typescript
 const macros = mapNutrientsToMacros(foodDetails.foodNutrients);
 // Returns: { calories: 110, protein: 23.1, carbs: 0, fat: 1.2 }
 ```
 
 **Nutrient ID Mapping:**
+
 - Energy (kcal): ID 1008
 - Protein (g): ID 1003
 - Carbohydrate (g): ID 1005
 - Total lipid/fat (g): ID 1004
 
 **Defaults:**
+
 - Missing nutrients default to 0
 - All values per 100g (USDA standard)
 
@@ -116,41 +132,49 @@ const macros = mapNutrientsToMacros(foodDetails.foodNutrients);
 **Added to `ingredientRouter`:**
 
 #### **searchExternal**
+
 ```typescript
 trpc.ingredient.searchExternal.useQuery({ query: "chicken breast" });
 ```
 
 **Input:**
+
 - `query`: string (min 2 chars, max 100 chars)
 
 **Output:**
+
 ```typescript
 Array<{
   fdcId: number;
   description: string;
   brandOwner?: string;
   dataType?: string;
-}>
+}>;
 ```
 
 **Behavior:**
+
 - Calls USDA search endpoint server-side
 - Returns raw results (no database interaction)
 - API key never exposed to client
 
 #### **importExternal**
+
 ```typescript
 trpc.ingredient.importExternal.useMutation({ fdcId: 171477 });
 ```
 
 **Input:**
+
 - `fdcId`: positive integer
 
 **Output:**
+
 - Existing Ingredient (if already imported)
 - Newly created Ingredient (if first import)
 
 **Behavior:**
+
 1. Check for existing ingredient: `(userId, source=USDA, sourceId=String(fdcId))`
 2. If exists → return it (idempotent)
 3. If not exists:
@@ -164,6 +188,7 @@ trpc.ingredient.importExternal.useMutation({ fdcId: 171477 });
      - `sourceId: String(fdcId)`
 
 **Dedupe Logic:**
+
 ```typescript
 const existing = await ctx.db.ingredient.findUnique({
   where: {
@@ -186,6 +211,7 @@ if (existing) return existing; // Already imported
 #### Key Changes
 
 **Removed:**
+
 - `apiSearchResults` state (now from tRPC query)
 - `isSearching` state (now `usdaSearchQuery.isLoading`)
 - `handleUSDASearch` async fetch logic
@@ -193,6 +219,7 @@ if (existing) return existing; // Already imported
 - Complex nutrient mapping in component
 
 **Added:**
+
 ```typescript
 const [usdaQuery, setUsdaQuery] = useState("");
 const [enabledUsdaSearch, setEnabledUsdaSearch] = useState(false);
@@ -207,11 +234,12 @@ const importMutation = trpc.ingredient.importExternal.useMutation({
     utils.ingredient.list.invalidate();
     setEnabledUsdaSearch(false);
     setApiSearchQuery("");
-  }
+  },
 });
 ```
 
 **Search Flow:**
+
 1. User types in search box
 2. User clicks "Search" button
 3. `setUsdaQuery` + `setEnabledUsdaSearch(true)` trigger query
@@ -221,6 +249,7 @@ const importMutation = trpc.ingredient.importExternal.useMutation({
 7. Success → invalidate ingredient list, ingredient appears in "Browse Database"
 
 **UI Features:**
+
 - Loading states: "Searching..." and "Importing..." buttons
 - Error handling: Shows tRPC errors or custom errors
 - Results display: Shows description, brand owner (if available), "Per 100g serving" note
@@ -234,11 +263,13 @@ const importMutation = trpc.ingredient.importExternal.useMutation({
 ### ⚠️ Prerequisites
 
 1. **Get USDA API Key:**
+
    - Visit: https://fdc.nal.usda.gov/api-key-signup.html
    - Sign up (free)
    - Check your email for API key
 
 2. **Add to .env.local:**
+
    ```env
    USDA_API_KEY="your_actual_key_here"
    ```
@@ -251,12 +282,14 @@ const importMutation = trpc.ingredient.importExternal.useMutation({
 ### 1. Search USDA Database
 
 **Steps:**
+
 1. Navigate to Ingredients page
 2. Click "USDA API" tab
 3. Enter search: "chicken breast"
 4. Click "Search"
 
 **Expected:**
+
 - Button shows "Searching..." while loading
 - Results appear (should see 10-20 items)
 - Each result shows:
@@ -273,10 +306,12 @@ const importMutation = trpc.ingredient.importExternal.useMutation({
 ### 2. Import Ingredient
 
 **Steps:**
+
 1. Click "Import" on first result (e.g., fdcId: 171477)
 2. Wait for import to complete
 
 **Expected:**
+
 - Button shows "Importing..." during mutation
 - Success: results clear, search box clears
 - Imported ingredient appears in "Browse Database" tab
@@ -288,6 +323,7 @@ const importMutation = trpc.ingredient.importExternal.useMutation({
 ✅ Serving shows "100 g"
 
 **Example imported ingredient:**
+
 ```
 Name: Chicken, broilers or fryers, breast, meat only, raw
 Serving: 100 g
@@ -301,10 +337,12 @@ Source: USDA
 ### 3. Test Deduplication
 
 **Steps:**
+
 1. Search again for "chicken breast"
 2. Click "Import" on the SAME result (same fdcId)
 
 **Expected:**
+
 - Import completes instantly (no API call to USDA)
 - No duplicate created in database
 - Existing ingredient still shows only once
@@ -317,6 +355,7 @@ Source: USDA
 ### 4. Test Different Foods
 
 **Try these searches:**
+
 - "brown rice" → Foundation foods
 - "greek yogurt" → Branded foods (may have brandOwner)
 - "salmon" → Multiple varieties
@@ -330,12 +369,14 @@ Source: USDA
 ### 5. Test Editability
 
 **Steps:**
+
 1. Import a USDA ingredient
 2. Navigate to "Browse Database" tab
 3. Click "Edit" on the USDA ingredient
 4. (Note: Edit UI may need implementation in future)
 
 **Current state:**
+
 - Edit button exists but may need handler
 - Imported ingredients are normal `Ingredient` rows
 - No special restrictions on USDA items
@@ -348,6 +389,7 @@ Source: USDA
 ### 6. Refresh & Persistence
 
 **Steps:**
+
 1. Import several ingredients
 2. Refresh the page (F5 / Cmd+R)
 
@@ -363,6 +405,7 @@ Source: USDA
 ### tRPC Procedures
 
 #### `trpc.ingredient.searchExternal`
+
 ```typescript
 const { data, isLoading, error } = trpc.ingredient.searchExternal.useQuery(
   { query: "chicken breast" },
@@ -375,10 +418,11 @@ Array<{
   description: string;
   brandOwner?: string;
   dataType?: string;
-}>
+}>;
 ```
 
 #### `trpc.ingredient.importExternal`
+
 ```typescript
 const importMutation = trpc.ingredient.importExternal.useMutation({
   onSuccess: (ingredient) => {
@@ -387,7 +431,7 @@ const importMutation = trpc.ingredient.importExternal.useMutation({
   },
   onError: (error) => {
     console.error("Import failed:", error.message);
-  }
+  },
 });
 
 importMutation.mutate({ fdcId: 171477 });
@@ -398,6 +442,7 @@ importMutation.mutate({ fdcId: 171477 });
 ### USDA Client (Server-Only)
 
 #### `searchFoods(query: string)`
+
 ```typescript
 import { searchFoods } from "@/server/providers/usda";
 
@@ -406,6 +451,7 @@ const results = await searchFoods("chicken");
 ```
 
 #### `getFoodDetails(fdcId: number)`
+
 ```typescript
 import { getFoodDetails } from "@/server/providers/usda";
 
@@ -414,6 +460,7 @@ const details = await getFoodDetails(171477);
 ```
 
 #### `mapNutrientsToMacros(nutrients: UsdaFoodNutrient[])`
+
 ```typescript
 import { mapNutrientsToMacros } from "@/server/providers/usda";
 
@@ -426,60 +473,74 @@ const macros = mapNutrientsToMacros(details.foodNutrients);
 ## Architecture Decisions
 
 ### 1. Why Server-Side API Calls?
+
 **Problem:** Client-side calls expose API key in browser  
 **Solution:** tRPC procedures on server  
 **Benefits:**
+
 - API key never sent to client
 - Rate limiting controlled server-side
 - Easier to swap USDA for other providers later
 - Can add caching/throttling in one place
 
 ### 2. Why Always Import as 100g?
+
 **Problem:** USDA provides data per 100g, but serving sizes vary wildly  
 **Solution:** Standardize to 100g in database  
 **Benefits:**
+
 - Consistent unit across all USDA imports
 - Easy to scale in recipes (multiply by grams needed / 100)
 - Matches how USDA presents data
 - User can change serving size after import if needed
 
 **Alternative considered:**
+
 - Use USDA's suggested serving size
 - **Rejected:** Too inconsistent, harder to compare ingredients
 
 ### 3. Why Dedupe on (userId, source, sourceId)?
+
 **Problem:** User might search twice and import same food  
 **Solution:** Unique constraint on composite key  
 **Benefits:**
+
 - Postgres enforces uniqueness automatically
 - Import is idempotent (safe to retry)
 - Doesn't prevent importing similar foods (e.g., raw vs cooked chicken)
 
 **Edge case:**
+
 - Two users can import same fdcId → different Ingredient rows (by design)
 - One user cannot have duplicate fdcId
 
 ### 4. Why Not Show Macros in Search Results?
+
 **Problem:** Search endpoint returns minimal data, details require second API call  
 **Solution:** Show description only, fetch macros on import  
 **Benefits:**
+
 - Faster search (1 API call instead of N+1)
 - USDA API rate limits respected
 - Macros only fetched when user commits to import
 
 **Future enhancement:**
+
 - Could show cached macros if previously imported by anyone
 - Would require shared ingredient cache table
 
 ### 5. Why Keep Imported Ingredients Editable?
+
 **Problem:** USDA data sometimes incorrect or user needs adjustments  
 **Solution:** Treat USDA imports as regular ingredients  
 **Benefits:**
+
 - User can fix errors (e.g., wrong serving size)
 - Can customize for specific brands/preparations
 - No special UI logic for "locked" vs "editable"
 
 **Trade-off:**
+
 - User might accidentally break accurate USDA data
 - **Mitigation:** Source badge reminds user of origin
 
@@ -488,14 +549,16 @@ const macros = mapNutrientsToMacros(details.foodNutrients);
 ## Known Behaviors & Limitations
 
 ### Current Scope (v1)
+
 ✅ Search USDA by keyword  
 ✅ Import with one click  
 ✅ Auto-populate macros per 100g  
 ✅ Prevent duplicate imports  
 ✅ Server-side API key security  
-✅ Error handling for API failures  
+✅ Error handling for API failures
 
 ### Not Included (Future Enhancements)
+
 ❌ Barcode scanning (out of scope)  
 ❌ OCR / label scanning (out of scope)  
 ❌ Multiple provider fallback (USDA only)  
@@ -503,9 +566,10 @@ const macros = mapNutrientsToMacros(details.foodNutrients);
 ❌ Recipe import from USDA (ingredients only)  
 ❌ Caching USDA results (every search hits API)  
 ❌ Favorite/bookmark USDA items  
-❌ Bulk import (one at a time)  
+❌ Bulk import (one at a time)
 
 ### Edge Cases Handled
+
 - **Missing nutrients:** Default to 0 (e.g., pure fat has 0g carbs)
 - **Duplicate import attempt:** Returns existing ingredient (no error)
 - **Invalid fdcId:** USDA API returns 404, mutation fails with error
@@ -513,27 +577,31 @@ const macros = mapNutrientsToMacros(details.foodNutrients);
 - **API rate limit hit:** Error displayed to user, can retry later
 
 ### Potential Issues
+
 - **USDA API downtime:** Search/import fails, shows error to user
-  - *Mitigation:* None currently, would need retry logic or fallback
+  - _Mitigation:_ None currently, would need retry logic or fallback
 - **Stale USDA data:** Ingredient imported today may be updated in USDA tomorrow
-  - *Mitigation:* User can manually edit or re-import
+  - _Mitigation:_ User can manually edit or re-import
 - **Branded foods:** May have incomplete data or unusual serving sizes
-  - *Mitigation:* All forced to 100g, user can verify/edit
+  - _Mitigation:_ All forced to 100g, user can verify/edit
 
 ---
 
 ## USDA Endpoints Used
 
 ### 1. Search Endpoint
+
 **URL:** `https://api.nal.usda.gov/fdc/v1/foods/search`  
 **Method:** GET  
 **Params:**
+
 - `api_key`: Your USDA API key
 - `query`: Search term (e.g., "chicken breast")
 - `pageSize`: Number of results (we use 20)
 - `dataType`: Filter by food types (Foundation, SR Legacy, Survey)
 
 **Response:**
+
 ```json
 {
   "foods": [
@@ -548,12 +616,15 @@ const macros = mapNutrientsToMacros(details.foodNutrients);
 ```
 
 ### 2. Details Endpoint
+
 **URL:** `https://api.nal.usda.gov/fdc/v1/food/{fdcId}`  
 **Method:** GET  
 **Params:**
+
 - `api_key`: Your USDA API key
 
 **Response:**
+
 ```json
 {
   "fdcId": 171477,
@@ -584,6 +655,7 @@ const macros = mapNutrientsToMacros(details.foodNutrients);
 ## Example Imported Ingredients
 
 ### 1. Chicken Breast (Raw)
+
 ```
 fdcId: 171477
 Name: Chicken, broilers or fryers, breast, meat only, raw
@@ -596,12 +668,14 @@ Source: USDA
 ```
 
 **Mapping:**
+
 - Energy (1008): 110 kcal
 - Protein (1003): 23.1 g
 - Carbs (1005): 0 g
 - Fat (1004): 1.2 g
 
 ### 2. Brown Rice (Cooked)
+
 ```
 fdcId: 168878
 Name: Rice, brown, medium-grain, cooked
@@ -614,6 +688,7 @@ Source: USDA
 ```
 
 ### 3. Greek Yogurt (Non-Fat)
+
 ```
 fdcId: 170903
 Name: Yogurt, Greek, plain, nonfat
@@ -630,24 +705,28 @@ Source: USDA
 ## Missing Nutrient Edge Cases Encountered
 
 ### 1. Pure Protein Foods
+
 **Example:** Egg whites  
 **Missing:** Fat (negligible)  
 **Default:** fat = 0  
 **Result:** Imported as 0g fat (correct)
 
 ### 2. Pure Fat Foods
+
 **Example:** Olive oil  
 **Missing:** Protein, Carbs  
 **Default:** protein = 0, carbs = 0  
 **Result:** Imported as 0g protein, 0g carbs (correct)
 
 ### 3. Vegetables with Trace Macros
+
 **Example:** Lettuce  
 **Missing:** Sometimes protein <0.1g rounds to 0  
 **Default:** protein = 0  
 **Result:** May lose precision but functionally correct
 
 ### 4. Processed Foods
+
 **Example:** Diet soda  
 **Missing:** All macros (zero-calorie)  
 **Default:** All = 0  
@@ -660,12 +739,14 @@ Source: USDA
 ### Test Case: Import Same Ingredient Twice
 
 **Setup:**
+
 1. Search "chicken breast"
 2. Import fdcId 171477
 3. Search "chicken breast" again
 4. Import fdcId 171477 again
 
 **Expected Behavior:**
+
 - First import: Creates new Ingredient row
 - Second import: Returns existing Ingredient (no new row)
 - Database query:
@@ -678,21 +759,23 @@ Source: USDA
   Returns: 1 row (always)
 
 **Verification Query:**
+
 ```typescript
 const existing = await db.ingredient.findUnique({
   where: {
     userId_source_sourceId: {
       userId: "user1",
       source: "USDA",
-      sourceId: "171477"
-    }
-  }
+      sourceId: "171477",
+    },
+  },
 });
 // exists after first import
 // same row after second import
 ```
 
 **Postgres Constraint:**
+
 ```sql
 CONSTRAINT "Ingredient_userId_source_sourceId_key"
   UNIQUE ("userId", "source", "sourceId")
@@ -703,17 +786,20 @@ CONSTRAINT "Ingredient_userId_source_sourceId_key"
 ## Files Modified/Created
 
 ### Created
+
 - `src/server/providers/usda.ts` (170 lines) - USDA API client
 - `.env.example` - Updated with USDA_API_KEY
 - `PHASE4B_COMPLETE.md` - This file
 
 ### Modified
+
 - `src/env.ts` - Added USDA_API_KEY validation (1 line)
 - `prisma/schema.prisma` - Added unique constraint + index (2 lines)
 - `src/server/trpc/routers/ingredient.ts` - Added 2 procedures (60+ lines)
 - `src/components/IngredientsDatabase.tsx` - Refactored USDA search to use tRPC (150+ lines changed)
 
 ### Unchanged
+
 - All other routers (recipe, mealPlan, shopping, inbody)
 - All other components (MealPlanner, RecipeBuilder, etc.)
 - No new dependencies required
@@ -723,21 +809,27 @@ CONSTRAINT "Ingredient_userId_source_sourceId_key"
 ## Quality Checks
 
 ### TypeScript
+
 ```bash
 pnpm typecheck
 ```
+
 ✅ No errors (0 issues)
 
 ### Linting
+
 ```bash
 pnpm lint
 ```
+
 ✅ No warnings (53 files checked)
 
 ### Formatting
+
 ```bash
 pnpm format
 ```
+
 ✅ Fixed 5 files automatically
 
 ---
@@ -756,6 +848,7 @@ pnpm prisma:migrate --create-only --name usda_import_dedupe
 ```
 
 **Migration will add:**
+
 ```sql
 CREATE UNIQUE INDEX "Ingredient_userId_source_sourceId_key"
   ON "Ingredient"("userId", "source", "sourceId");
@@ -769,7 +862,9 @@ CREATE INDEX "Ingredient_userId_source_sourceId_idx"
 ## What's Next?
 
 ### Phase 4B Complete ✅
+
 All planned features implemented:
+
 - ✅ USDA_API_KEY environment validation
 - ✅ Prisma unique constraint for dedupe
 - ✅ USDA client module (server-only)
@@ -780,26 +875,32 @@ All planned features implemented:
 - ✅ All checks passing (typecheck, lint, format)
 
 ### User Requested: STOP Here
+
 Phase 4B is the stopping point per user directive.
 
 ### Potential Future Phases (If Requested)
+
 **Phase 5A: Recipe Enhancements**
+
 - Duplicate recipes
 - Recipe templates
 - Recipe tagging/categories
 
 **Phase 5B: Meal Plan Improvements**
+
 - Weekly templates
 - Copy weeks
 - Quick add meals
 
 **Phase 5C: Advanced Ingredient Features**
+
 - Edit USDA ingredients in UI
 - Favorite ingredients
 - Recent ingredients list
 - Ingredient categories
 
 **Phase 5D: Shopping List Plus**
+
 - Store sections (produce, meat, dairy)
 - Price tracking
 - Store selection
@@ -809,14 +910,18 @@ Phase 4B is the stopping point per user directive.
 ## Troubleshooting
 
 ### Error: "USDA_API_KEY is required"
+
 **Cause:** Missing or empty USDA_API_KEY in .env.local  
 **Fix:**
+
 1. Get API key from https://fdc.nal.usda.gov/api-key-signup.html
 2. Add to `.env.local`: `USDA_API_KEY="your_key"`
 3. Restart dev server
 
 ### Error: "Failed to search USDA database"
+
 **Possible causes:**
+
 1. USDA API is down (check status)
 2. API key is invalid
 3. Rate limit exceeded (wait a minute)
@@ -826,22 +931,28 @@ Phase 4B is the stopping point per user directive.
 Check server logs for detailed error message
 
 ### Import Button Does Nothing
+
 **Cause:** Duplicate import (already exists)  
 **Expected:** Button completes, no new row  
 **Verify:** Check "Browse Database" tab for existing ingredient
 
 ### Macros Show All Zeros
+
 **Possible causes:**
+
 1. USDA food has no nutrient data (rare)
 2. Nutrient ID mapping issue (check IDs: 1008, 1003, 1005, 1004)
 
 **Debug:**
+
 1. Test with known food (e.g., chicken breast fdcId: 171477)
 2. Check USDA API response in server logs
 
 ### Migration Fails: "Unique constraint violation"
+
 **Cause:** Existing duplicate ingredients in database  
 **Fix:**
+
 1. Find duplicates:
    ```sql
    SELECT "userId", "source", "sourceId", COUNT(*)

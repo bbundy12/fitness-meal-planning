@@ -73,9 +73,7 @@ export async function searchFoods(query: string): Promise<UsdaSearchResult[]> {
     const response = await fetch(url.toString());
 
     if (!response.ok) {
-      throw new Error(
-        `USDA API error: ${response.status} ${response.statusText}`,
-      );
+      throw new Error(`USDA API error: ${response.status} ${response.statusText}`);
     }
 
     const data = (await response.json()) as UsdaSearchResponse;
@@ -89,7 +87,7 @@ export async function searchFoods(query: string): Promise<UsdaSearchResult[]> {
   } catch (error) {
     console.error("USDA search error:", error);
     throw new Error(
-      `Failed to search USDA database: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to search USDA database: ${error instanceof Error ? error.message : "Unknown error"}`
     );
   }
 }
@@ -107,9 +105,7 @@ export async function getFoodDetails(fdcId: number): Promise<UsdaFoodDetails> {
     const response = await fetch(url.toString());
 
     if (!response.ok) {
-      throw new Error(
-        `USDA API error: ${response.status} ${response.statusText}`,
-      );
+      throw new Error(`USDA API error: ${response.status} ${response.statusText}`);
     }
 
     const data = (await response.json()) as UsdaDetailsResponse;
@@ -128,7 +124,9 @@ export async function getFoodDetails(fdcId: number): Promise<UsdaFoodDetails> {
   } catch (error) {
     console.error("USDA details error:", error);
     throw new Error(
-      `Failed to fetch USDA food details: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to fetch USDA food details: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
     );
   }
 }
@@ -148,9 +146,7 @@ export interface MappedMacros {
   fat: number;
 }
 
-export function mapNutrientsToMacros(
-  nutrients: UsdaFoodNutrient[],
-): MappedMacros {
+export function mapNutrientsToMacros(nutrients: UsdaFoodNutrient[]): MappedMacros {
   const findNutrient = (id: number): number => {
     const nutrient = nutrients.find((n) => n.nutrientId === id);
     return nutrient?.value ?? 0;
