@@ -3,25 +3,30 @@
 ## ✅ Completed Tasks
 
 ### 1. Dependencies Installed
+
 - **Runtime**: `@prisma/client`, `@trpc/server`, `@trpc/client`, `@trpc/react-query`, `@tanstack/react-query`, `zod`
 - **Dev**: `prisma`
 - All packages compatible with Next.js 16 App Router
 
 ### 2. Database Schema (Prisma)
+
 Location: [`prisma/schema.prisma`](prisma/schema.prisma)
 
 **Models:**
+
 - **`Ingredient`**: Multi-tenant (userId), stores name, macros (calories, protein, carbs, fat), serving info (servingSize, servingUnit, gramsPerServing), source (MANUAL/USDA), optional sourceId
 - **`Recipe`**: Multi-tenant (userId), title, description, instructions, servings, calculated macros (calories, protein, carbs, fat)
 - **`RecipeItem`**: Links recipes to ingredients with quantity and unit (grams/serving), cascade deletes with recipe, restricts deletes on ingredients
 
 **Key Features:**
+
 - User-scoped data for multi-user readiness (hard-coded `default-user` for now)
 - Flexible serving sizes with unit support
 - Automatic timestamp tracking (createdAt, updatedAt)
 - Proper relation constraints (cascade, restrict)
 
 ### 3. Database Client
+
 Location: [`src/server/db/client.ts`](src/server/db/client.ts)
 
 - Singleton pattern to prevent connection exhaustion
@@ -30,6 +35,7 @@ Location: [`src/server/db/client.ts`](src/server/db/client.ts)
 - Compatible with Prisma 7.x
 
 ### 4. Environment Configuration
+
 - **[`.env.example`](.env.example)**: Template with Neon Postgres URL format
 - **[`.env.local`](.env.local)**: Local development config (using local Postgres URL)
 - **[`src/env.ts`](src/env.ts)**: Zod-based runtime validation for `DATABASE_URL` and `NODE_ENV`
@@ -37,21 +43,26 @@ Location: [`src/server/db/client.ts`](src/server/db/client.ts)
 ### 5. tRPC Setup
 
 #### Context ([`src/server/trpc/context.ts`](src/server/trpc/context.ts))
+
 - Provides `db` (PrismaClient) and `userId` (hard-coded `default-user`)
 - Ready for future auth integration
 
 #### Core tRPC ([`src/server/trpc/trpc.ts`](src/server/trpc/trpc.ts))
+
 - Configured with context type
 - Exports `router` and `publicProcedure` builders
 
 #### App Router ([`src/server/trpc/root.ts`](src/server/trpc/root.ts))
+
 - Combines `ingredientRouter` and `recipeRouter`
 - Exports `AppRouter` type for client-side type safety
 
 ### 6. tRPC Routers
 
 #### Ingredient Router ([`src/server/trpc/routers/ingredient.ts`](src/server/trpc/routers/ingredient.ts))
+
 **Procedures:**
+
 - `list`: Get all ingredients for current user (sorted by name)
 - `searchLocal`: Search ingredients by name (case-insensitive)
 - `create`: Add new ingredient with validation (Zod schema)
@@ -59,12 +70,15 @@ Location: [`src/server/db/client.ts`](src/server/db/client.ts)
 - `delete`: Remove ingredient (will fail if used in recipes due to Restrict constraint)
 
 **Schema Validation:**
+
 - Name, macros (calories, protein, carbs, fat)
 - Serving info (servingSize as Float, servingUnit, gramsPerServing)
 - Source (MANUAL/USDA) with optional sourceId
 
 #### Recipe Router ([`src/server/trpc/routers/recipe.ts`](src/server/trpc/routers/recipe.ts))
+
 **Procedures:**
+
 - `list`: Get all recipes with nested items/ingredients
 - `get`: Get single recipe by ID with full details
 - `create`: Create recipe with items, auto-calculate macros using `macroMath.ts`
@@ -72,11 +86,13 @@ Location: [`src/server/db/client.ts`](src/server/db/client.ts)
 - `delete`: Remove recipe (cascades to RecipeItems)
 
 **Features:**
+
 - Automatic macro calculation per serving
 - Validation ensures all ingredient IDs exist and belong to user
 - Returns full recipe with nested ingredient details
 
 ### 7. Macro Calculation Helper
+
 Location: [`src/lib/macroMath.ts`](src/lib/macroMath.ts)
 
 - `calculateRecipeMacros(items)`: Calculates total macros for a recipe
@@ -85,6 +101,7 @@ Location: [`src/lib/macroMath.ts`](src/lib/macroMath.ts)
 - Returns totals: `{ calories, protein, carbs, fat }`
 
 ### 8. API Route Handler
+
 Location: [`src/app/api/trpc/[trpc]/route.ts`](src/app/api/trpc/[trpc]/route.ts)
 
 - Next.js App Router compatible (GET/POST)
@@ -95,22 +112,27 @@ Location: [`src/app/api/trpc/[trpc]/route.ts`](src/app/api/trpc/[trpc]/route.ts)
 ### 9. Client-Side Setup
 
 #### tRPC Client ([`src/lib/trpc.ts`](src/lib/trpc.ts))
+
 - Type-safe React hooks via `createTRPCReact<AppRouter>()`
 - Full IntelliSense for all procedures
 
 #### Providers Component ([`src/components/Providers.tsx`](src/components/Providers.tsx))
+
 - Wraps app with `QueryClientProvider` and `trpc.Provider`
 - Configures `httpBatchLink` for efficient batching
 - Client-only component (`"use client"`)
 
 #### Layout Integration ([`src/app/layout.tsx`](src/app/layout.tsx))
+
 - Wrapped entire app with `<Providers>` component
 - All pages now have access to tRPC hooks
 
 ### 10. UI Components Updated
 
 #### IngredientsDatabase ([`src/components/IngredientsDatabase.tsx`](src/components/IngredientsDatabase.tsx))
+
 **Changes:**
+
 - Replaced mock state with `trpc.ingredient.list.useQuery()`
 - Added `trpc.ingredient.create.useMutation()` with auto-invalidation
 - Added `trpc.ingredient.delete.useMutation()` with auto-invalidation
@@ -120,13 +142,16 @@ Location: [`src/app/api/trpc/[trpc]/route.ts`](src/app/api/trpc/[trpc]/route.ts)
 - Badge displays source (MANUAL/USDA)
 
 **Features Preserved:**
+
 - Browse all ingredients with search filter
 - Manual entry tab with macro inputs
 - USDA API tab with search and import
 - Edit/delete buttons (delete wired, edit ready for future)
 
 #### RecipeBuilder ([`src/components/RecipeBuilder.tsx`](src/components/RecipeBuilder.tsx))
+
 **Changes:**
+
 - Replaced mock state with `trpc.recipe.list.useQuery()`
 - Added `trpc.ingredient.list.useQuery()` for ingredient selection
 - Added `trpc.recipe.create.useMutation()` with auto-calculation
@@ -136,6 +161,7 @@ Location: [`src/app/api/trpc/[trpc]/route.ts`](src/app/api/trpc/[trpc]/route.ts)
 - Shows recipe items count in saved recipes
 
 **Features:**
+
 - Create recipe with searchable ingredient picker
 - Add ingredients with quantity (servings or grams)
 - Live macro totals per serving
@@ -144,6 +170,7 @@ Location: [`src/app/api/trpc/[trpc]/route.ts`](src/app/api/trpc/[trpc]/route.ts)
 - Delete recipes
 
 ### 11. Scripts Added to package.json
+
 ```json
 "prisma:generate": "prisma generate",
 "prisma:migrate": "prisma migrate dev",
@@ -153,10 +180,12 @@ Location: [`src/app/api/trpc/[trpc]/route.ts`](src/app/api/trpc/[trpc]/route.ts)
 ## 📝 Testing Checklist (Before Database Migration)
 
 ### Prerequisites
+
 You need a Postgres database. Choose one:
+
 1. **Neon (Recommended)**: Free tier at https://neon.tech
    - Create project → Copy connection string → Update `.env.local`
-2. **Local Postgres**: 
+2. **Local Postgres**:
    ```bash
    # Install Postgres (macOS)
    brew install postgresql
@@ -166,6 +195,7 @@ You need a Postgres database. Choose one:
    ```
 
 ### Migration Steps
+
 ```bash
 cd trofitrak
 
@@ -184,6 +214,7 @@ pnpm dev
 ### Manual Testing Plan
 
 #### Test 1: Create Ingredients
+
 1. Navigate to `/ingredients`
 2. Click "Add Manual" tab
 3. Create ingredient: "Chicken Breast"
@@ -194,6 +225,7 @@ pnpm dev
 6. Refresh page → ✅ Should persist
 
 #### Test 2: USDA Import
+
 1. Click "USDA API" tab
 2. Search: "banana"
 3. Click "Add to Database" on a result
@@ -201,6 +233,7 @@ pnpm dev
 5. Refresh page → ✅ Should persist with sourceId
 
 #### Test 3: Create Recipe
+
 1. Navigate to `/recipes`
 2. Click "New Recipe"
 3. Title: "Chicken and Rice"
@@ -215,17 +248,20 @@ pnpm dev
 12. Refresh page → ✅ Should persist
 
 #### Test 4: Delete Recipe
+
 1. Click trash icon on a recipe
 2. ✅ Should disappear immediately
 3. Refresh → ✅ Should stay gone
 
 #### Test 5: Delete Ingredient
+
 1. Try deleting ingredient used in a recipe
 2. ✅ Should fail (Restrict constraint)
 3. Delete recipe first
 4. Now delete ingredient → ✅ Should succeed
 
 ## 🚫 Out of Scope (Phase 1)
+
 - ❌ External USDA lookup/import (kept manual form + search mock)
 - ❌ Authentication (using hard-coded `default-user`)
 - ❌ Recipe editing (create + delete only)
@@ -235,7 +271,9 @@ pnpm dev
 - ❌ InBody scan persistence
 
 ## 🎯 Next Steps (Phase 2+)
+
 User requested to **STOP after Phase 1** for approval. Future phases could include:
+
 1. USDA API integration (external lookup + import)
 2. Edit functionality for recipes and ingredients
 3. Meal planner persistence (weekly plans)
@@ -245,6 +283,7 @@ User requested to **STOP after Phase 1** for approval. Future phases could inclu
 7. Macro tracking and progress charts
 
 ## 📊 Code Quality
+
 - ✅ `pnpm lint` passing (Biome)
 - ✅ `pnpm typecheck` passing (TypeScript strict mode)
 - ✅ `pnpm format` applied (Biome formatter)
@@ -252,6 +291,7 @@ User requested to **STOP after Phase 1** for approval. Future phases could inclu
 - ✅ All tRPC types fully inferred (end-to-end type safety)
 
 ## 🔗 Architecture Summary
+
 ```
 Client (React)
   ↓ (tRPC hooks via @trpc/react-query)
@@ -263,6 +303,7 @@ PostgreSQL Database
 ```
 
 **Key Benefits:**
+
 - Full type safety from DB to UI (no manual type definitions)
 - Automatic query invalidation on mutations
 - Batched requests (multiple queries in one HTTP call)
@@ -270,6 +311,7 @@ PostgreSQL Database
 - Multi-user ready (just needs auth integration)
 
 ## 📦 File Structure
+
 ```
 trofitrak/
 ├── prisma/
