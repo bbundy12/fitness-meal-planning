@@ -20,7 +20,7 @@ export function Providers({ children }: { children: ReactNode }) {
           url: `${getBaseUrl()}/api/trpc`,
         }),
       ],
-    })
+    }),
   );
 
   return (

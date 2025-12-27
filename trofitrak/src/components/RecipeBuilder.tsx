@@ -38,18 +38,22 @@ export function RecipeBuilder() {
   const [servings, setServings] = useState("1");
   const [instructions, setInstructions] = useState("");
   const [ingredientSearch, setIngredientSearch] = useState("");
-  const [selectedIngredient, setSelectedIngredient] = useState<string | null>(null);
+  const [selectedIngredient, setSelectedIngredient] = useState<string | null>(
+    null,
+  );
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState<"grams" | "serving">("serving");
   const [recipeItems, setRecipeItems] = useState<RecipeItem[]>([]);
 
   const filteredIngredients = ingredients.filter((ing: { name: string }) =>
-    ing.name.toLowerCase().includes(ingredientSearch.toLowerCase())
+    ing.name.toLowerCase().includes(ingredientSearch.toLowerCase()),
   );
 
   const handleAddIngredient = () => {
     if (!selectedIngredient || !quantity) return;
-    const ingredient = ingredients.find((ing: { id: string }) => ing.id === selectedIngredient);
+    const ingredient = ingredients.find(
+      (ing: { id: string }) => ing.id === selectedIngredient,
+    );
     if (!ingredient) return;
 
     const newItem: RecipeItem = {
@@ -72,7 +76,9 @@ export function RecipeBuilder() {
   const calculateTotals = () => {
     return recipeItems.reduce(
       (acc, item) => {
-        const ingredient = ingredients.find((ing) => ing.id === item.ingredientId);
+        const ingredient = ingredients.find(
+          (ing) => ing.id === item.ingredientId,
+        );
         if (!ingredient) return acc;
 
         let factor = 1;
@@ -90,7 +96,7 @@ export function RecipeBuilder() {
           fat: acc.fat + ingredient.fat * factor,
         };
       },
-      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      { calories: 0, protein: 0, carbs: 0, fat: 0 },
     );
   };
 
@@ -133,7 +139,10 @@ export function RecipeBuilder() {
           Create and manage your recipes with automatic macro calculations
         </p>
       </div>
-      <Button onClick={() => setShowForm(!showForm)} className="bg-rose-600 hover:bg-rose-700">
+      <Button
+        onClick={() => setShowForm(!showForm)}
+        className="bg-rose-600 hover:bg-rose-700"
+      >
         {showForm ? (
           "Cancel"
         ) : (
@@ -185,26 +194,31 @@ export function RecipeBuilder() {
                   }}
                   placeholder="Search for ingredient..."
                 />
-                {ingredientSearch && filteredIngredients.length > 0 && !selectedIngredient && (
-                  <div className="border border-slate-200 rounded-lg p-2 max-h-48 overflow-y-auto">
-                    {filteredIngredients.slice(0, 5).map((ing: (typeof ingredients)[0]) => (
-                      <button
-                        key={ing.id}
-                        type="button"
-                        className="w-full text-left px-3 py-2 hover:bg-slate-100 rounded"
-                        onClick={() => {
-                          setSelectedIngredient(ing.id);
-                          setIngredientSearch(ing.name);
-                        }}
-                      >
-                        <div className="text-slate-900">{ing.name}</div>
-                        <div className="text-slate-500">
-                          {ing.servingSize} {ing.servingUnit} • {ing.calories} cal
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {ingredientSearch &&
+                  filteredIngredients.length > 0 &&
+                  !selectedIngredient && (
+                    <div className="border border-slate-200 rounded-lg p-2 max-h-48 overflow-y-auto">
+                      {filteredIngredients
+                        .slice(0, 5)
+                        .map((ing: (typeof ingredients)[0]) => (
+                          <button
+                            key={ing.id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 hover:bg-slate-100 rounded"
+                            onClick={() => {
+                              setSelectedIngredient(ing.id);
+                              setIngredientSearch(ing.name);
+                            }}
+                          >
+                            <div className="text-slate-900">{ing.name}</div>
+                            <div className="text-slate-500">
+                              {ing.servingSize} {ing.servingUnit} •{" "}
+                              {ing.calories} cal
+                            </div>
+                          </button>
+                        ))}
+                    </div>
+                  )}
                 {selectedIngredient && (
                   <div className="flex gap-2">
                     <Input
@@ -217,13 +231,19 @@ export function RecipeBuilder() {
                     />
                     <select
                       value={unit}
-                      onChange={(e) => setUnit(e.target.value as "grams" | "serving")}
+                      onChange={(e) =>
+                        setUnit(e.target.value as "grams" | "serving")
+                      }
                       className="border border-slate-300 rounded px-3"
                     >
                       <option value="serving">Serving</option>
                       <option value="grams">Grams</option>
                     </select>
-                    <Button type="button" onClick={handleAddIngredient} variant="outline">
+                    <Button
+                      type="button"
+                      onClick={handleAddIngredient}
+                      variant="outline"
+                    >
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
@@ -241,7 +261,7 @@ export function RecipeBuilder() {
                 <div className="space-y-2">
                   {recipeItems.map((item) => {
                     const ingredient = ingredients.find(
-                      (ing: { id: string }) => ing.id === item.ingredientId
+                      (ing: { id: string }) => ing.id === item.ingredientId,
                     );
                     if (!ingredient) return null;
 
@@ -262,10 +282,23 @@ export function RecipeBuilder() {
                             {item.ingredientName} ({item.quantity} {item.unit})
                           </div>
                           <div className="text-slate-500 flex gap-3">
-                            <span>{Math.round(ingredient.calories * factor)} cal</span>
-                            <span>P: {Math.round(ingredient.protein * factor * 10) / 10}g</span>
-                            <span>C: {Math.round(ingredient.carbs * factor * 10) / 10}g</span>
-                            <span>F: {Math.round(ingredient.fat * factor * 10) / 10}g</span>
+                            <span>
+                              {Math.round(ingredient.calories * factor)} cal
+                            </span>
+                            <span>
+                              P:{" "}
+                              {Math.round(ingredient.protein * factor * 10) /
+                                10}
+                              g
+                            </span>
+                            <span>
+                              C:{" "}
+                              {Math.round(ingredient.carbs * factor * 10) / 10}g
+                            </span>
+                            <span>
+                              F: {Math.round(ingredient.fat * factor * 10) / 10}
+                              g
+                            </span>
                           </div>
                         </div>
                         <Button
@@ -331,11 +364,16 @@ export function RecipeBuilder() {
         {isLoading ? (
           <div className="text-center py-8 text-slate-500">Loading...</div>
         ) : recipes.length === 0 ? (
-          <div className="text-center py-8 text-slate-500">No recipes yet. Create one above!</div>
+          <div className="text-center py-8 text-slate-500">
+            No recipes yet. Create one above!
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recipes.map((recipe: (typeof recipes)[0]) => (
-              <Card key={recipe.id} className="hover:shadow-md transition-shadow">
+              <Card
+                key={recipe.id}
+                className="hover:shadow-md transition-shadow"
+              >
                 <CardHeader>
                   <CardTitle className="flex items-start justify-between">
                     <span>{recipe.title}</span>
@@ -348,25 +386,35 @@ export function RecipeBuilder() {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <p className="text-slate-500">Calories</p>
-                      <div className="text-slate-900">{Math.round(recipe.calories)}</div>
+                      <div className="text-slate-900">
+                        {Math.round(recipe.calories)}
+                      </div>
                     </div>
                     <div>
                       <p className="text-slate-500">Protein</p>
-                      <div className="text-slate-900">{Math.round(recipe.protein)}g</div>
+                      <div className="text-slate-900">
+                        {Math.round(recipe.protein)}g
+                      </div>
                     </div>
                     <div>
                       <p className="text-slate-500">Carbs</p>
-                      <div className="text-slate-900">{Math.round(recipe.carbs)}g</div>
+                      <div className="text-slate-900">
+                        {Math.round(recipe.carbs)}g
+                      </div>
                     </div>
                     <div>
                       <p className="text-slate-500">Fat</p>
-                      <div className="text-slate-900">{Math.round(recipe.fat)}g</div>
+                      <div className="text-slate-900">
+                        {Math.round(recipe.fat)}g
+                      </div>
                     </div>
                   </div>
                   {recipe.description && (
                     <div>
                       <p className="text-slate-500">Description</p>
-                      <p className="text-slate-900 line-clamp-2">{recipe.description}</p>
+                      <p className="text-slate-900 line-clamp-2">
+                        {recipe.description}
+                      </p>
                     </div>
                   )}
                   {recipe.instructions && (
@@ -379,7 +427,9 @@ export function RecipeBuilder() {
                   )}
                   <div>
                     <p className="text-slate-500">Ingredients</p>
-                    <p className="text-slate-900">{recipe.items.length} items</p>
+                    <p className="text-slate-900">
+                      {recipe.items.length} items
+                    </p>
                   </div>
                   <div className="flex gap-2 pt-2">
                     <Button variant="outline" size="sm" className="flex-1">
@@ -390,7 +440,9 @@ export function RecipeBuilder() {
                       variant="outline"
                       size="sm"
                       className="text-red-600 hover:text-red-700"
-                      onClick={() => deleteRecipeMutation.mutate({ id: recipe.id })}
+                      onClick={() =>
+                        deleteRecipeMutation.mutate({ id: recipe.id })
+                      }
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

@@ -31,81 +31,87 @@ export const recipeRouter = router({
     });
   }),
 
-  get: publicProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
-    return ctx.db.recipe.findUnique({
-      where: {
-        id: input.id,
-        userId: ctx.userId,
-      },
-      include: {
-        items: {
-          include: {
-            ingredient: true,
+  get: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.recipe.findUnique({
+        where: {
+          id: input.id,
+          userId: ctx.userId,
+        },
+        include: {
+          items: {
+            include: {
+              ingredient: true,
+            },
           },
         },
-      },
-    });
-  }),
+      });
+    }),
 
-  create: publicProcedure.input(recipeInputSchema).mutation(async ({ ctx, input }) => {
-    const { items: itemsInput, ...recipeData } = input;
+  create: publicProcedure
+    .input(recipeInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { items: itemsInput, ...recipeData } = input;
 
-    // Get all ingredients to calculate macros
-    const ingredients = await ctx.db.ingredient.findMany({
-      where: {
-        id: { in: itemsInput.map((item) => item.ingredientId) },
-        userId: ctx.userId,
-      },
-    });
-
-    // Calculate recipe totals
-    const itemsForCalculation = itemsInput.map((item) => {
-      const ingredient = ingredients.find((ing: { id: string }) => ing.id === item.ingredientId);
-      if (!ingredient) {
-        throw new Error(`Ingredient ${item.ingredientId} not found`);
-      }
-      return {
-        ...item,
-        ingredient: {
-          calories: ingredient.calories,
-          protein: ingredient.protein,
-          carbs: ingredient.carbs,
-          fat: ingredient.fat,
-          gramsPerServing: ingredient.gramsPerServing,
+      // Get all ingredients to calculate macros
+      const ingredients = await ctx.db.ingredient.findMany({
+        where: {
+          id: { in: itemsInput.map((item) => item.ingredientId) },
+          userId: ctx.userId,
         },
-      };
-    });
+      });
 
-    const totals = calculateRecipeMacros(itemsForCalculation);
+      // Calculate recipe totals
+      const itemsForCalculation = itemsInput.map((item) => {
+        const ingredient = ingredients.find(
+          (ing: { id: string }) => ing.id === item.ingredientId,
+        );
+        if (!ingredient) {
+          throw new Error(`Ingredient ${item.ingredientId} not found`);
+        }
+        return {
+          ...item,
+          ingredient: {
+            calories: ingredient.calories,
+            protein: ingredient.protein,
+            carbs: ingredient.carbs,
+            fat: ingredient.fat,
+            gramsPerServing: ingredient.gramsPerServing,
+          },
+        };
+      });
 
-    return ctx.db.recipe.create({
-      data: {
-        userId: ctx.userId,
-        ...recipeData,
-        calories: totals.calories,
-        protein: totals.protein,
-        carbs: totals.carbs,
-        fat: totals.fat,
-        items: {
-          create: itemsInput,
-        },
-      },
-      include: {
-        items: {
-          include: {
-            ingredient: true,
+      const totals = calculateRecipeMacros(itemsForCalculation);
+
+      return ctx.db.recipe.create({
+        data: {
+          userId: ctx.userId,
+          ...recipeData,
+          calories: totals.calories,
+          protein: totals.protein,
+          carbs: totals.carbs,
+          fat: totals.fat,
+          items: {
+            create: itemsInput,
           },
         },
-      },
-    });
-  }),
+        include: {
+          items: {
+            include: {
+              ingredient: true,
+            },
+          },
+        },
+      });
+    }),
 
   update: publicProcedure
     .input(
       z.object({
         id: z.string(),
         data: recipeInputSchema.partial().omit({ items: true }),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       return ctx.db.recipe.update({
@@ -124,12 +130,14 @@ export const recipeRouter = router({
       });
     }),
 
-  delete: publicProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
-    return ctx.db.recipe.delete({
-      where: {
-        id: input.id,
-        userId: ctx.userId,
-      },
-    });
-  }),
+  delete: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.recipe.delete({
+        where: {
+          id: input.id,
+          userId: ctx.userId,
+        },
+      });
+    }),
 });

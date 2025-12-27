@@ -22,7 +22,9 @@ export interface RecipeItemForCalculation {
 /**
  * Calculate total macros for a recipe based on its items
  */
-export function calculateRecipeMacros(items: RecipeItemForCalculation[]): Macros {
+export function calculateRecipeMacros(
+  items: RecipeItemForCalculation[],
+): Macros {
   return items.reduce<Macros>(
     (totals, item) => {
       const { ingredient, quantity, unit } = item;
@@ -43,6 +45,6 @@ export function calculateRecipeMacros(items: RecipeItemForCalculation[]): Macros
         fat: totals.fat + ingredient.fat * factor,
       };
     },
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    { calories: 0, protein: 0, carbs: 0, fat: 0 },
   );
 }

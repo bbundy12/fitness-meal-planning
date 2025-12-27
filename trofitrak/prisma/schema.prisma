@@ -12,6 +12,15 @@ enum IngredientSource {
   USDA
 }
 
+enum MealSlot {
+  BREAKFAST
+  SNACK1
+  LUNCH
+  SNACK2
+  DINNER
+  SNACK3
+}
+
 model Ingredient {
   id              String           @id @default(cuid())
   userId          String
@@ -50,6 +59,7 @@ model Recipe {
   fat          Float
 
   items        RecipeItem[]
+  mealPlanItems MealPlanItem[]
 
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
@@ -71,4 +81,38 @@ model RecipeItem {
 
   @@index([recipeId])
   @@index([ingredientId])
+}
+
+model MealPlanWeek {
+  id            String   @id @default(cuid())
+  userId        String
+  weekStartDate DateTime
+
+  items         MealPlanItem[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, weekStartDate])
+  @@index([userId, weekStartDate])
+}
+
+model MealPlanItem {
+  id            String   @id @default(cuid())
+  weekId        String
+  dayOfWeek     Int      // 0-6 (Mon=0)
+  slot          MealSlot
+
+  recipeId      String
+  servingsMult  Float    @default(1)
+
+  week          MealPlanWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  recipe        Recipe       @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([weekId])
+  @@index([recipeId])
+  @@unique([weekId, dayOfWeek, slot])
 }

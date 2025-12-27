@@ -107,8 +107,8 @@ export function IngredientsDatabase() {
       const USDA_API_KEY = "C1tNEzeYoTH9BXm0HXekfIYmB7xFHTjzzTdwWLx3";
       const response = await fetch(
         `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(
-          apiSearchQuery
-        )}&pageSize=10&api_key=${USDA_API_KEY}`
+          apiSearchQuery,
+        )}&pageSize=10&api_key=${USDA_API_KEY}`,
       );
 
       if (!response.ok) {
@@ -122,23 +122,25 @@ export function IngredientsDatabase() {
       const data: { foods?: RawApiFood[] } = await response.json();
 
       // Transform USDA response to our format
-      const foods: USDAFoodItem[] = (data.foods ?? []).slice(0, 10).map((food) => {
-        const nutrients = food.foodNutrients ?? [];
-        return {
-          fdcId: food.fdcId,
-          description: food.description,
-          dataType: food.dataType,
-          foodNutrients: nutrients.map((n) => ({
-            nutrientId: n.nutrientId,
-            nutrientName: n.nutrientName,
-            nutrientNumber: n.nutrientNumber ?? "",
-            unitName: n.unitName ?? "g",
-            value: n.value ?? 0,
-          })),
-          servingSize: food.servingSize ?? 100,
-          servingSizeUnit: food.servingSizeUnit ?? "g",
-        };
-      });
+      const foods: USDAFoodItem[] = (data.foods ?? [])
+        .slice(0, 10)
+        .map((food) => {
+          const nutrients = food.foodNutrients ?? [];
+          return {
+            fdcId: food.fdcId,
+            description: food.description,
+            dataType: food.dataType,
+            foodNutrients: nutrients.map((n) => ({
+              nutrientId: n.nutrientId,
+              nutrientName: n.nutrientName,
+              nutrientNumber: n.nutrientNumber ?? "",
+              unitName: n.unitName ?? "g",
+              value: n.value ?? 0,
+            })),
+            servingSize: food.servingSize ?? 100,
+            servingSizeUnit: food.servingSizeUnit ?? "g",
+          };
+        });
 
       setApiSearchResults(foods);
     } catch (error) {
@@ -158,13 +160,24 @@ export function IngredientsDatabase() {
       servingSize: servingSizeNum,
       servingUnit: result.servingSizeUnit ?? "g",
       gramsPerServing: servingSizeNum,
-      calories: Math.round(result.foodNutrients.find((n) => n.nutrientId === 1008)?.value ?? 0),
+      calories: Math.round(
+        result.foodNutrients.find((n) => n.nutrientId === 1008)?.value ?? 0,
+      ),
       protein:
-        Math.round((result.foodNutrients.find((n) => n.nutrientId === 1003)?.value ?? 0) * 10) / 10,
+        Math.round(
+          (result.foodNutrients.find((n) => n.nutrientId === 1003)?.value ??
+            0) * 10,
+        ) / 10,
       carbs:
-        Math.round((result.foodNutrients.find((n) => n.nutrientId === 1005)?.value ?? 0) * 10) / 10,
+        Math.round(
+          (result.foodNutrients.find((n) => n.nutrientId === 1005)?.value ??
+            0) * 10,
+        ) / 10,
       fat:
-        Math.round((result.foodNutrients.find((n) => n.nutrientId === 1004)?.value ?? 0) * 10) / 10,
+        Math.round(
+          (result.foodNutrients.find((n) => n.nutrientId === 1004)?.value ??
+            0) * 10,
+        ) / 10,
       source: "USDA",
       sourceId: String(result.fdcId),
     });
@@ -180,14 +193,16 @@ export function IngredientsDatabase() {
 
   // Filter ingredients
   const filteredIngredients = ingredients.filter((ing: { name: string }) =>
-    ing.name.toLowerCase().includes(searchFilter.toLowerCase())
+    ing.name.toLowerCase().includes(searchFilter.toLowerCase()),
   );
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl">Ingredients Database</h2>
-        <p className="text-slate-500">Manage your custom ingredients and search USDA API</p>
+        <p className="text-slate-500">
+          Manage your custom ingredients and search USDA API
+        </p>
       </div>
 
       <Tabs defaultValue="browse" className="space-y-4">
@@ -225,7 +240,9 @@ export function IngredientsDatabase() {
             <CardContent>
               <div className="space-y-2">
                 {isLoading ? (
-                  <div className="text-center py-8 text-slate-500">Loading...</div>
+                  <div className="text-center py-8 text-slate-500">
+                    Loading...
+                  </div>
                 ) : filteredIngredients.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">
                     {searchFilter
@@ -233,43 +250,55 @@ export function IngredientsDatabase() {
                       : "No ingredients yet. Add some using the tabs above."}
                   </div>
                 ) : (
-                  filteredIngredients.map((ingredient: (typeof ingredients)[0]) => (
-                    <div
-                      key={ingredient.id}
-                      className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <div className="text-slate-900">{ingredient.name}</div>
-                          <Badge variant={ingredient.source === "USDA" ? "default" : "outline"}>
-                            {ingredient.source}
-                          </Badge>
+                  filteredIngredients.map(
+                    (ingredient: (typeof ingredients)[0]) => (
+                      <div
+                        key={ingredient.id}
+                        className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <div className="text-slate-900">
+                              {ingredient.name}
+                            </div>
+                            <Badge
+                              variant={
+                                ingredient.source === "USDA"
+                                  ? "default"
+                                  : "outline"
+                              }
+                            >
+                              {ingredient.source}
+                            </Badge>
+                          </div>
+                          <div className="text-slate-500 mt-1">
+                            {ingredient.servingSize} {ingredient.servingUnit}
+                          </div>
+                          <div className="flex gap-4 mt-2 text-slate-600">
+                            <span>{ingredient.calories} cal</span>
+                            <span>P: {ingredient.protein}g</span>
+                            <span>C: {ingredient.carbs}g</span>
+                            <span>F: {ingredient.fat}g</span>
+                          </div>
                         </div>
-                        <div className="text-slate-500 mt-1">
-                          {ingredient.servingSize} {ingredient.servingUnit}
-                        </div>
-                        <div className="flex gap-4 mt-2 text-slate-600">
-                          <span>{ingredient.calories} cal</span>
-                          <span>P: {ingredient.protein}g</span>
-                          <span>C: {ingredient.carbs}g</span>
-                          <span>F: {ingredient.fat}g</span>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm">
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleDeleteIngredient(ingredient.id)
+                            }
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteIngredient(ingredient.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
+                    ),
+                  )
                 )}
               </div>
             </CardContent>
@@ -392,16 +421,19 @@ export function IngredientsDatabase() {
                   </Button>
                 </div>
                 <p className="text-slate-500">
-                  Enter food with quantity (e.g., "1 cup rice"). Requires USDA API credentials.
+                  Enter food with quantity (e.g., "1 cup rice"). Requires USDA
+                  API credentials.
                 </p>
               </div>
 
               {/* API Configuration Notice */}
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="text-green-900">✓ USDA FoodData Central API Configured</div>
+                <div className="text-green-900">
+                  ✓ USDA FoodData Central API Configured
+                </div>
                 <p className="text-green-700 mt-1">
-                  Your API key is ready to use. Search for foods from the comprehensive USDA
-                  database.
+                  Your API key is ready to use. Search for foods from the
+                  comprehensive USDA database.
                 </p>
                 <p className="text-green-600 mt-2">
                   Learn more at{" "}
@@ -434,38 +466,45 @@ export function IngredientsDatabase() {
                       className="flex items-center justify-between p-4 border border-slate-200 rounded-lg bg-slate-50"
                     >
                       <div>
-                        <div className="text-slate-900 capitalize">{result.description}</div>
+                        <div className="text-slate-900 capitalize">
+                          {result.description}
+                        </div>
                         <div className="text-slate-500 mt-1">
                           {result.servingSize} {result.servingSizeUnit}
                         </div>
                         <div className="flex gap-4 mt-2 text-slate-600">
                           <span>
                             {Math.round(
-                              result.foodNutrients.find((n) => n.nutrientId === 1008)?.value ?? 0
+                              result.foodNutrients.find(
+                                (n) => n.nutrientId === 1008,
+                              )?.value ?? 0,
                             )}{" "}
                             cal
                           </span>
                           <span>
                             P:{" "}
                             {Math.round(
-                              (result.foodNutrients.find((n) => n.nutrientId === 1003)?.value ??
-                                0) * 10
+                              (result.foodNutrients.find(
+                                (n) => n.nutrientId === 1003,
+                              )?.value ?? 0) * 10,
                             ) / 10}
                             g
                           </span>
                           <span>
                             C:{" "}
                             {Math.round(
-                              (result.foodNutrients.find((n) => n.nutrientId === 1005)?.value ??
-                                0) * 10
+                              (result.foodNutrients.find(
+                                (n) => n.nutrientId === 1005,
+                              )?.value ?? 0) * 10,
                             ) / 10}
                             g
                           </span>
                           <span>
                             F:{" "}
                             {Math.round(
-                              (result.foodNutrients.find((n) => n.nutrientId === 1004)?.value ??
-                                0) * 10
+                              (result.foodNutrients.find(
+                                (n) => n.nutrientId === 1004,
+                              )?.value ?? 0) * 10,
                             ) / 10}
                             g
                           </span>

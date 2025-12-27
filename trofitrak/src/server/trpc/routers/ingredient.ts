@@ -38,21 +38,23 @@ export const ingredientRouter = router({
       });
     }),
 
-  create: publicProcedure.input(ingredientInputSchema).mutation(async ({ ctx, input }) => {
-    return ctx.db.ingredient.create({
-      data: {
-        userId: ctx.userId,
-        ...input,
-      },
-    });
-  }),
+  create: publicProcedure
+    .input(ingredientInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.ingredient.create({
+        data: {
+          userId: ctx.userId,
+          ...input,
+        },
+      });
+    }),
 
   update: publicProcedure
     .input(
       z.object({
         id: z.string(),
         data: ingredientInputSchema.partial(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       return ctx.db.ingredient.update({
@@ -64,12 +66,14 @@ export const ingredientRouter = router({
       });
     }),
 
-  delete: publicProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
-    return ctx.db.ingredient.delete({
-      where: {
-        id: input.id,
-        userId: ctx.userId,
-      },
-    });
-  }),
+  delete: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.ingredient.delete({
+        where: {
+          id: input.id,
+          userId: ctx.userId,
+        },
+      });
+    }),
 });
