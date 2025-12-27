@@ -23,7 +23,7 @@ export const inbodyRouter = router({
       z.object({
         from: z.string().optional(), // ISO date string (YYYY-MM-DD)
         to: z.string().optional(), // ISO date string (YYYY-MM-DD)
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.userId;
@@ -86,7 +86,7 @@ export const inbodyRouter = router({
         bodyFatPercent: z.number().min(0).max(100),
         skeletalMuscleMassKg: z.number().positive(),
         notes: z.string().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.userId;
@@ -118,7 +118,7 @@ export const inbodyRouter = router({
         bodyFatPercent: z.number().min(0).max(100).optional(),
         skeletalMuscleMassKg: z.number().positive().optional(),
         notes: z.string().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.userId;
@@ -167,7 +167,7 @@ export const inbodyRouter = router({
     .input(
       z.object({
         id: z.string(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.userId;

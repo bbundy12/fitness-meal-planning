@@ -4,7 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Plus, BookOpen, Calendar, ShoppingCart, Edit2, Check, X, Activity } from "lucide-react";
+import {
+  Plus,
+  BookOpen,
+  Calendar,
+  ShoppingCart,
+  Edit2,
+  Check,
+  X,
+  Activity,
+} from "lucide-react";
 import { useState } from "react";
 import { DEFAULT_USER } from "@/lib/default-user";
 import { trpc } from "@/lib/trpc";
@@ -61,7 +70,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl">Dashboard</h2>
-        <p className="text-slate-500">Welcome back! Here are your daily macro goals.</p>
+        <p className="text-slate-500">
+          Welcome back! Here are your daily macro goals.
+        </p>
       </div>
 
       {/* Daily Macro Goals */}
@@ -182,15 +193,21 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                 </div>
                 <div>
                   <p className="text-slate-500">Weight</p>
-                  <div className="text-slate-900">{latestScan.weightLbs} lbs</div>
+                  <div className="text-slate-900">
+                    {latestScan.weightLbs} lbs
+                  </div>
                 </div>
                 <div>
                   <p className="text-slate-500">Body Fat %</p>
-                  <div className="text-slate-900">{latestScan.bodyFatPercent}%</div>
+                  <div className="text-slate-900">
+                    {latestScan.bodyFatPercent}%
+                  </div>
                 </div>
                 <div>
                   <p className="text-slate-500">Skeletal Muscle</p>
-                  <div className="text-slate-900">{latestScan.skeletalMuscleMassKg} kg</div>
+                  <div className="text-slate-900">
+                    {latestScan.skeletalMuscleMassKg} kg
+                  </div>
                 </div>
               </div>
               <Button
@@ -202,7 +219,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             </div>
           ) : (
             <>
-              <p className="text-slate-500 mb-4">Track your body composition changes over time.</p>
+              <p className="text-slate-500 mb-4">
+                Track your body composition changes over time.
+              </p>
               <Button
                 onClick={() => onNavigate("inbody")}
                 className="bg-rose-600 hover:bg-rose-700"

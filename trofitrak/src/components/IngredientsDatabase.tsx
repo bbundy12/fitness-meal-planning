@@ -10,33 +10,6 @@ import { Plus, Search, Database, Edit2, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { trpc } from "@/lib/trpc";
 
-export interface CustomIngredient {
-  id: string;
-  name: string;
-  servingSize: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  source: "custom" | "usda";
-  createdAt: string;
-}
-
-interface USDAFoodItem {
-  fdcId: number;
-  description: string;
-  dataType: string;
-  foodNutrients: Array<{
-    nutrientId: number;
-    nutrientName: string;
-    nutrientNumber: string;
-    unitName: string;
-    value: number;
-  }>;
-  servingSize?: number;
-  servingSizeUnit?: string;
-}
-
 export function IngredientsDatabase() {
   const utils = trpc.useUtils();
   const { data: ingredients = [], isLoading } = trpc.ingredient.list.useQuery();
@@ -51,6 +24,21 @@ export function IngredientsDatabase() {
     },
   });
 
+  // USDA tRPC queries
+  const [usdaQuery, setUsdaQuery] = useState("");
+  const [enabledUsdaSearch, setEnabledUsdaSearch] = useState(false);
+  const usdaSearchQuery = trpc.ingredient.searchExternal.useQuery(
+    { query: usdaQuery },
+    { enabled: enabledUsdaSearch && usdaQuery.length >= 2 },
+  );
+  const importMutation = trpc.ingredient.importExternal.useMutation({
+    onSuccess: () => {
+      utils.ingredient.list.invalidate();
+      setEnabledUsdaSearch(false);
+      setApiSearchQuery("");
+    },
+  });
+
   // Form states for manual entry
   const [manualName, setManualName] = useState("");
   const [manualServing, setManualServing] = useState("");
@@ -61,8 +49,6 @@ export function IngredientsDatabase() {
 
   // USDA API search states
   const [apiSearchQuery, setApiSearchQuery] = useState("");
-  const [apiSearchResults, setApiSearchResults] = useState<USDAFoodItem[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [apiError, setApiError] = useState("");
 
   // Filter state
@@ -96,94 +82,17 @@ export function IngredientsDatabase() {
     setManualFat("");
   };
 
-  // USDA API search
-  const handleUSDASearch = async () => {
-    if (!apiSearchQuery.trim()) return;
-
-    setIsSearching(true);
+  // USDA API search - now using tRPC
+  const handleUSDASearch = () => {
+    if (!apiSearchQuery.trim() || apiSearchQuery.length < 2) return;
     setApiError("");
-
-    try {
-      const USDA_API_KEY = "C1tNEzeYoTH9BXm0HXekfIYmB7xFHTjzzTdwWLx3";
-      const response = await fetch(
-        `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(
-          apiSearchQuery,
-        )}&pageSize=10&api_key=${USDA_API_KEY}`,
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch from USDA API");
-      }
-
-      type RawApiFood = Omit<USDAFoodItem, "foodNutrients"> & {
-        foodNutrients?: USDAFoodItem["foodNutrients"];
-      };
-
-      const data: { foods?: RawApiFood[] } = await response.json();
-
-      // Transform USDA response to our format
-      const foods: USDAFoodItem[] = (data.foods ?? [])
-        .slice(0, 10)
-        .map((food) => {
-          const nutrients = food.foodNutrients ?? [];
-          return {
-            fdcId: food.fdcId,
-            description: food.description,
-            dataType: food.dataType,
-            foodNutrients: nutrients.map((n) => ({
-              nutrientId: n.nutrientId,
-              nutrientName: n.nutrientName,
-              nutrientNumber: n.nutrientNumber ?? "",
-              unitName: n.unitName ?? "g",
-              value: n.value ?? 0,
-            })),
-            servingSize: food.servingSize ?? 100,
-            servingSizeUnit: food.servingSizeUnit ?? "g",
-          };
-        });
-
-      setApiSearchResults(foods);
-    } catch (error) {
-      console.error("USDA API Error:", error);
-      setApiError("Failed to search USDA database. Please try again.");
-    } finally {
-      setIsSearching(false);
-    }
+    setUsdaQuery(apiSearchQuery);
+    setEnabledUsdaSearch(true);
   };
 
-  // Add ingredient from USDA results to database
-  const handleAddFromUSDA = (result: USDAFoodItem) => {
-    const servingSizeNum = result.servingSize ?? 100;
-
-    createMutation.mutate({
-      name: result.description,
-      servingSize: servingSizeNum,
-      servingUnit: result.servingSizeUnit ?? "g",
-      gramsPerServing: servingSizeNum,
-      calories: Math.round(
-        result.foodNutrients.find((n) => n.nutrientId === 1008)?.value ?? 0,
-      ),
-      protein:
-        Math.round(
-          (result.foodNutrients.find((n) => n.nutrientId === 1003)?.value ??
-            0) * 10,
-        ) / 10,
-      carbs:
-        Math.round(
-          (result.foodNutrients.find((n) => n.nutrientId === 1005)?.value ??
-            0) * 10,
-        ) / 10,
-      fat:
-        Math.round(
-          (result.foodNutrients.find((n) => n.nutrientId === 1004)?.value ??
-            0) * 10,
-        ) / 10,
-      source: "USDA",
-      sourceId: String(result.fdcId),
-    });
-
-    setApiSearchResults([]);
-    setApiSearchQuery("");
+  // Add ingredient from USDA results to database - now using tRPC
+  const handleAddFromUSDA = (fdcId: number) => {
+    importMutation.mutate({ fdcId });
   };
 
   // Delete ingredient
@@ -414,15 +323,16 @@ export function IngredientsDatabase() {
                   <Button
                     onClick={handleUSDASearch}
                     className="bg-rose-600 hover:bg-rose-700"
-                    disabled={isSearching || !apiSearchQuery.trim()}
+                    disabled={
+                      usdaSearchQuery.isLoading || !apiSearchQuery.trim()
+                    }
                   >
                     <Search className="h-4 w-4 mr-2" />
-                    Search
+                    {usdaSearchQuery.isLoading ? "Searching..." : "Search"}
                   </Button>
                 </div>
                 <p className="text-slate-500">
-                  Enter food with quantity (e.g., "1 cup rice"). Requires USDA
-                  API credentials.
+                  Search USDA FoodData Central for nutritional information.
                 </p>
               </div>
 
@@ -449,76 +359,56 @@ export function IngredientsDatabase() {
               </div>
 
               {/* Error Display */}
-              {apiError && (
+              {(apiError || usdaSearchQuery.error) && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                   <div className="text-red-900">Error</div>
-                  <p className="text-red-700 mt-1">{apiError}</p>
+                  <p className="text-red-700 mt-1">
+                    {apiError || usdaSearchQuery.error?.message}
+                  </p>
                 </div>
               )}
 
               {/* Search Results */}
-              {apiSearchResults.length > 0 && (
+              {usdaSearchQuery.data && usdaSearchQuery.data.length > 0 && (
                 <div className="space-y-2">
-                  <Label>Search Results</Label>
-                  {apiSearchResults.map((result) => (
+                  <Label>
+                    Search Results ({usdaSearchQuery.data.length} items)
+                  </Label>
+                  {usdaSearchQuery.data.map((result) => (
                     <div
                       key={result.fdcId}
                       className="flex items-center justify-between p-4 border border-slate-200 rounded-lg bg-slate-50"
                     >
                       <div>
-                        <div className="text-slate-900 capitalize">
+                        <div className="text-slate-900">
                           {result.description}
                         </div>
+                        {result.brandOwner && (
+                          <div className="text-slate-500 mt-1">
+                            {result.brandOwner}
+                          </div>
+                        )}
                         <div className="text-slate-500 mt-1">
-                          {result.servingSize} {result.servingSizeUnit}
-                        </div>
-                        <div className="flex gap-4 mt-2 text-slate-600">
-                          <span>
-                            {Math.round(
-                              result.foodNutrients.find(
-                                (n) => n.nutrientId === 1008,
-                              )?.value ?? 0,
-                            )}{" "}
-                            cal
-                          </span>
-                          <span>
-                            P:{" "}
-                            {Math.round(
-                              (result.foodNutrients.find(
-                                (n) => n.nutrientId === 1003,
-                              )?.value ?? 0) * 10,
-                            ) / 10}
-                            g
-                          </span>
-                          <span>
-                            C:{" "}
-                            {Math.round(
-                              (result.foodNutrients.find(
-                                (n) => n.nutrientId === 1005,
-                              )?.value ?? 0) * 10,
-                            ) / 10}
-                            g
-                          </span>
-                          <span>
-                            F:{" "}
-                            {Math.round(
-                              (result.foodNutrients.find(
-                                (n) => n.nutrientId === 1004,
-                              )?.value ?? 0) * 10,
-                            ) / 10}
-                            g
-                          </span>
+                          Per 100g serving (USDA standard)
                         </div>
                       </div>
                       <Button
-                        onClick={() => handleAddFromUSDA(result)}
+                        onClick={() => handleAddFromUSDA(result.fdcId)}
                         className="bg-rose-600 hover:bg-rose-700"
+                        disabled={importMutation.isPending}
                       >
                         <Plus className="h-4 w-4 mr-2" />
-                        Add to Database
+                        {importMutation.isPending ? "Importing..." : "Import"}
                       </Button>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* No results message */}
+              {usdaSearchQuery.data && usdaSearchQuery.data.length === 0 && (
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-500">
+                  No results found. Try a different search term.
                 </div>
               )}
             </CardContent>

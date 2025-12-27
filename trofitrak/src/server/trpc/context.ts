@@ -1,12 +1,20 @@
 import { db } from "../db/client";
-
-// Hard-coded user ID (we'll add auth later)
-const DEFAULT_USER_ID = "default-user";
+import { auth } from "../auth";
+import { TRPCError } from "@trpc/server";
 
 export async function createContext() {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "You must be logged in to access this resource",
+    });
+  }
+
   return {
     db,
-    userId: DEFAULT_USER_ID,
+    userId: session.user.id,
   };
 }
 

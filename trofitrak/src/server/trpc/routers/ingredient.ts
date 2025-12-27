@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../trpc";
+import {
+  searchFoods,
+  getFoodDetails,
+  mapNutrientsToMacros,
+} from "../../providers/usda";
 
 const ingredientInputSchema = z.object({
   name: z.string().min(1),
@@ -73,6 +78,73 @@ export const ingredientRouter = router({
         where: {
           id: input.id,
           userId: ctx.userId,
+        },
+      });
+    }),
+
+  /**
+   * searchExternal: Search USDA FoodData Central for ingredients
+   * Returns top results without saving to database
+   */
+  searchExternal: publicProcedure
+    .input(
+      z.object({
+        query: z.string().min(2).max(100),
+      }),
+    )
+    .query(async ({ input }) => {
+      return searchFoods(input.query);
+    }),
+
+  /**
+   * importExternal: Import a USDA ingredient into the database
+   * Creates a new Ingredient with source=USDA and sourceId=fdcId
+   * Prevents duplicates via unique constraint on (userId, source, sourceId)
+   */
+  importExternal: publicProcedure
+    .input(
+      z.object({
+        fdcId: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const sourceId = String(input.fdcId);
+
+      // Check if already imported
+      const existing = await ctx.db.ingredient.findUnique({
+        where: {
+          userId_source_sourceId: {
+            userId: ctx.userId,
+            source: "USDA",
+            sourceId,
+          },
+        },
+      });
+
+      if (existing) {
+        return existing;
+      }
+
+      // Fetch USDA details
+      const foodDetails = await getFoodDetails(input.fdcId);
+
+      // Map nutrients to macros (per 100g)
+      const macros = mapNutrientsToMacros(foodDetails.foodNutrients);
+
+      // Create ingredient
+      return ctx.db.ingredient.create({
+        data: {
+          userId: ctx.userId,
+          name: foodDetails.description.trim(),
+          calories: macros.calories,
+          protein: macros.protein,
+          carbs: macros.carbs,
+          fat: macros.fat,
+          servingSize: 100,
+          servingUnit: "g",
+          gramsPerServing: 100,
+          source: "USDA",
+          sourceId,
         },
       });
     }),

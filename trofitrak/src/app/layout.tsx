@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { DesktopNav, MobileNav } from "@/components/site-nav";
 import { Providers } from "@/components/Providers";
+import { UserMenu } from "@/components/user-menu";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,7 +29,10 @@ export default function RootLayout({
                   <h1 className="text-slate-900">TrofiTrak</h1>
                 </Link>
 
-                <DesktopNav />
+                <div className="flex items-center gap-4">
+                  <DesktopNav />
+                  <UserMenu />
+                </div>
               </div>
             </div>
           </header>
