@@ -12,9 +12,11 @@ import {
   Edit2,
   Check,
   X,
+  Activity,
 } from "lucide-react";
 import { useState } from "react";
 import { DEFAULT_USER } from "@/lib/default-user";
+import { trpc } from "@/lib/trpc";
 
 interface DashboardProps {
   onNavigate: (section: string) => void;
@@ -35,6 +37,10 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const [editProtein, setEditProtein] = useState("");
   const [editCarbs, setEditCarbs] = useState("");
   const [editFat, setEditFat] = useState("");
+
+  // Fetch latest InBody scan
+  const latestScanQuery = trpc.inbody.latest.useQuery();
+  const latestScan = latestScanQuery.data;
 
   const data = goals;
 
@@ -168,19 +174,63 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       {/* InBody Scan Section */}
       <Card>
         <CardHeader>
-          <CardTitle>InBody Scan</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5 text-rose-600" />
+            Latest InBody Scan
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-slate-500 mb-4">
-            Track your body composition changes over time.
-          </p>
-          <Button
-            onClick={() => onNavigate("inbody")}
-            className="bg-rose-600 hover:bg-rose-700"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add New Scan
-          </Button>
+          {latestScanQuery.isLoading ? (
+            <p className="text-slate-500">Loading...</p>
+          ) : latestScan ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-slate-500">Scan Date</p>
+                  <div className="text-slate-900">
+                    {new Date(latestScan.scanDate).toLocaleDateString()}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-slate-500">Weight</p>
+                  <div className="text-slate-900">
+                    {latestScan.weightLbs} lbs
+                  </div>
+                </div>
+                <div>
+                  <p className="text-slate-500">Body Fat %</p>
+                  <div className="text-slate-900">
+                    {latestScan.bodyFatPercent}%
+                  </div>
+                </div>
+                <div>
+                  <p className="text-slate-500">Skeletal Muscle</p>
+                  <div className="text-slate-900">
+                    {latestScan.skeletalMuscleMassKg} kg
+                  </div>
+                </div>
+              </div>
+              <Button
+                onClick={() => onNavigate("inbody")}
+                className="bg-rose-600 hover:bg-rose-700"
+              >
+                View All Scans
+              </Button>
+            </div>
+          ) : (
+            <>
+              <p className="text-slate-500 mb-4">
+                Track your body composition changes over time.
+              </p>
+              <Button
+                onClick={() => onNavigate("inbody")}
+                className="bg-rose-600 hover:bg-rose-700"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add First Scan
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
 

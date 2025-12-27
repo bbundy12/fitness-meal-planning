@@ -155,3 +155,22 @@ model ShoppingListItemState {
   // One state row per ingredient (prevents dup saved states)
   @@unique([stateId, ingredientId])
 }
+
+model InBodyScan {
+  id                   String   @id @default(cuid())
+  userId               String
+  scanDate             DateTime
+
+  // Core measurements
+  weightLbs            Float
+  bodyFatPercent       Float
+  skeletalMuscleMassKg Float
+
+  // Optional notes
+  notes                String?
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([userId, scanDate])
+}
