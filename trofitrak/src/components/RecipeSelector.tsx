@@ -27,7 +27,11 @@ interface RecipeSelectorProps {
   onBack: () => void;
 }
 
-export function RecipeSelector({ context, onSelectRecipe, onBack }: RecipeSelectorProps) {
+export function RecipeSelector({
+  context,
+  onSelectRecipe,
+  onBack,
+}: RecipeSelectorProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   if (!context) {
@@ -141,7 +145,7 @@ export function RecipeSelector({ context, onSelectRecipe, onBack }: RecipeSelect
   ];
 
   const filteredRecipes = allRecipes.filter((recipe) =>
-    recipe.title.toLowerCase().includes(searchQuery.toLowerCase())
+    recipe.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -150,7 +154,9 @@ export function RecipeSelector({ context, onSelectRecipe, onBack }: RecipeSelect
         <div>
           <h2 className="text-3xl">Select Recipe</h2>
           <p className="text-slate-500">
-            {context ? `Choose a recipe for ${day} ${mealType}` : "Browse all recipes"}
+            {context
+              ? `Choose a recipe for ${day} ${mealType}`
+              : "Browse all recipes"}
           </p>
         </div>
         <Button variant="ghost" onClick={onBack} className="gap-2">
@@ -217,10 +223,14 @@ export function RecipeSelector({ context, onSelectRecipe, onBack }: RecipeSelect
                 {recipe.instructions && (
                   <div>
                     <p className="text-slate-500">Instructions</p>
-                    <p className="text-slate-900 line-clamp-2">{recipe.instructions}</p>
+                    <p className="text-slate-900 line-clamp-2">
+                      {recipe.instructions}
+                    </p>
                   </div>
                 )}
-                <Button className="w-full bg-rose-600 hover:bg-rose-700">Add to {mealType}</Button>
+                <Button className="w-full bg-rose-600 hover:bg-rose-700">
+                  Add to {mealType}
+                </Button>
               </CardContent>
             </Card>
           ))}

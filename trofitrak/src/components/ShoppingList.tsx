@@ -112,10 +112,13 @@ export function ShoppingList() {
     window.print();
   };
 
-  const totalItems = shoppingList.reduce((acc, cat) => acc + cat.items.length, 0);
+  const totalItems = shoppingList.reduce(
+    (acc, cat) => acc + cat.items.length,
+    0,
+  );
   const checkedItems = shoppingList.reduce(
     (acc, cat) => acc + cat.items.filter((item) => item.checked).length,
-    0
+    0,
   );
 
   return (
@@ -164,28 +167,38 @@ export function ShoppingList() {
               <CardTitle className="flex items-center justify-between">
                 <span>{category.category}</span>
                 <Badge variant="outline">
-                  {category.items.filter((i) => i.checked).length} / {category.items.length}
+                  {category.items.filter((i) => i.checked).length} /{" "}
+                  {category.items.length}
                 </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {category.items.map((item) => (
-                  <div key={item.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
+                  >
                     <Checkbox
                       id={item.id}
                       checked={item.checked}
-                      onCheckedChange={() => handleToggleItem(categoryIndex, item.id)}
+                      onCheckedChange={() =>
+                        handleToggleItem(categoryIndex, item.id)
+                      }
                     />
                     <label
                       htmlFor={item.id}
                       className={`flex-1 cursor-pointer ${
-                        item.checked ? "line-through text-slate-400" : "text-slate-900"
+                        item.checked
+                          ? "line-through text-slate-400"
+                          : "text-slate-900"
                       }`}
                     >
                       {item.name}
                     </label>
-                    <div className={`${item.checked ? "text-slate-400" : "text-slate-600"}`}>
+                    <div
+                      className={`${item.checked ? "text-slate-400" : "text-slate-600"}`}
+                    >
                       {item.quantity}
                     </div>
                   </div>

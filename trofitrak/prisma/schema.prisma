@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+enum IngredientSource {
+  MANUAL
+  USDA
+}
+
+model Ingredient {
+  id              String           @id @default(cuid())
+  userId          String
+  name            String
+
+  calories        Float
+  protein         Float
+  carbs           Float
+  fat             Float
+
+  servingSize     Float
+  servingUnit     String
+  gramsPerServing Float
+
+  source          IngredientSource @default(MANUAL)
+  sourceId        String?
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  recipeItems     RecipeItem[]
+}
+
+model Recipe {
+  id           String      @id @default(cuid())
+  userId       String
+  title        String
+  description  String?
+  instructions String?
+  servings     Int
+
+  // Calculated macros (per serving)
+  calories     Float
+  protein      Float
+  carbs        Float
+  fat          Float
+
+  items        RecipeItem[]
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model RecipeItem {
+  id           String     @id @default(cuid())
+  recipeId     String
+  ingredientId String
+
+  quantity     Float
+  unit         String
+
+  recipe       Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([recipeId])
+  @@index([ingredientId])
+}

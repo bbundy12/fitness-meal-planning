@@ -37,7 +37,15 @@ interface MealPlannerProps {
   onNavigateToRecipeSelector?: (day: string, mealType: string) => void;
 }
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
 
 const buildEmptyDayPlan = (day: string): DayPlan => ({
   breakfast: { id: `${day}-breakfast`, recipe: null },
@@ -123,7 +131,9 @@ export function MealPlanner({ onNavigateToRecipeSelector }: MealPlannerProps) {
 
   const [draggedRecipe, setDraggedRecipe] = useState<Recipe | null>(null);
   const [repeatDaily, setRepeatDaily] = useState(false);
-  const [weekPlan, setWeekPlan] = useState<Record<string, DayPlan>>(() => createEmptyWeekPlan());
+  const [weekPlan, setWeekPlan] = useState<Record<string, DayPlan>>(() =>
+    createEmptyWeekPlan(),
+  );
 
   const handleDragStart = (recipe: Recipe) => {
     setDraggedRecipe(recipe);
@@ -217,7 +227,9 @@ export function MealPlanner({ onNavigateToRecipeSelector }: MealPlannerProps) {
 
   const resetWeekPlan = () => {
     if (
-      window.confirm("Are you sure you want to reset the entire week? This will clear all meals.")
+      window.confirm(
+        "Are you sure you want to reset the entire week? This will clear all meals.",
+      )
     ) {
       setWeekPlan(createEmptyWeekPlan());
     }
@@ -244,7 +256,7 @@ export function MealPlanner({ onNavigateToRecipeSelector }: MealPlannerProps) {
         }
         return acc;
       },
-      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      { calories: 0, protein: 0, carbs: 0, fat: 0 },
     );
   };
 
@@ -263,7 +275,7 @@ export function MealPlanner({ onNavigateToRecipeSelector }: MealPlannerProps) {
           fat: acc.fat + dayTotals.fat,
         };
       },
-      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      { calories: 0, protein: 0, carbs: 0, fat: 0 },
     );
   };
 
@@ -280,7 +292,9 @@ export function MealPlanner({ onNavigateToRecipeSelector }: MealPlannerProps) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl">Meal Planner</h2>
-          <p className="text-slate-500">Click on any meal slot to browse and select recipes</p>
+          <p className="text-slate-500">
+            Click on any meal slot to browse and select recipes
+          </p>
         </div>
         <Button
           variant="outline"
@@ -353,7 +367,11 @@ export function MealPlanner({ onNavigateToRecipeSelector }: MealPlannerProps) {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Label htmlFor="repeat-mode">Repeat Daily Mode</Label>
-                <Switch id="repeat-mode" checked={repeatDaily} onCheckedChange={setRepeatDaily} />
+                <Switch
+                  id="repeat-mode"
+                  checked={repeatDaily}
+                  onCheckedChange={setRepeatDaily}
+                />
               </div>
               <p className="text-slate-500">
                 {repeatDaily
@@ -362,7 +380,11 @@ export function MealPlanner({ onNavigateToRecipeSelector }: MealPlannerProps) {
               </p>
             </div>
             {!repeatDaily && (
-              <Button variant="outline" onClick={copyMondayToAllDays} className="ml-4">
+              <Button
+                variant="outline"
+                onClick={copyMondayToAllDays}
+                className="ml-4"
+              >
                 <Copy className="mr-2 h-4 w-4" />
                 Copy Monday to All Days
               </Button>
@@ -382,8 +404,8 @@ export function MealPlanner({ onNavigateToRecipeSelector }: MealPlannerProps) {
                   <div className="flex items-center justify-between">
                     <CardTitle>{day}</CardTitle>
                     <Badge variant="outline">
-                      {dayTotals.calories} cal | P: {dayTotals.protein}g | C: {dayTotals.carbs}g |
-                      F: {dayTotals.fat}g
+                      {dayTotals.calories} cal | P: {dayTotals.protein}g | C:{" "}
+                      {dayTotals.carbs}g | F: {dayTotals.fat}g
                     </Badge>
                   </div>
 
@@ -397,7 +419,10 @@ export function MealPlanner({ onNavigateToRecipeSelector }: MealPlannerProps) {
                         </span>
                       </div>
                       <Progress
-                        value={getProgress(dayTotals.calories, dailyGoals.calories)}
+                        value={getProgress(
+                          dayTotals.calories,
+                          dailyGoals.calories,
+                        )}
                         className="h-2"
                       />
                     </div>
@@ -409,7 +434,10 @@ export function MealPlanner({ onNavigateToRecipeSelector }: MealPlannerProps) {
                         </span>
                       </div>
                       <Progress
-                        value={getProgress(dayTotals.protein, dailyGoals.protein)}
+                        value={getProgress(
+                          dayTotals.protein,
+                          dailyGoals.protein,
+                        )}
                         className="h-2"
                       />
                     </div>
@@ -442,67 +470,82 @@ export function MealPlanner({ onNavigateToRecipeSelector }: MealPlannerProps) {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  {(["breakfast", "snack1", "lunch", "snack2", "dinner", "snack3"] as const).map(
-                    (mealType) => {
-                      const slot = weekPlan[day][mealType];
-                      // Format display name for snacks
-                      const displayName = mealType.startsWith("snack")
-                        ? `Snack ${mealType.charAt(mealType.length - 1)}`
-                        : mealType;
+                  {(
+                    [
+                      "breakfast",
+                      "snack1",
+                      "lunch",
+                      "snack2",
+                      "dinner",
+                      "snack3",
+                    ] as const
+                  ).map((mealType) => {
+                    const slot = weekPlan[day][mealType];
+                    // Format display name for snacks
+                    const displayName = mealType.startsWith("snack")
+                      ? `Snack ${mealType.charAt(mealType.length - 1)}`
+                      : mealType;
 
-                      return (
-                        <button
-                          key={slot.id}
-                          type="button"
-                          onDragOver={handleDragOver}
-                          onDrop={() => handleDrop(day, mealType)}
-                          onClick={() => onNavigateToRecipeSelector?.(day, mealType)}
-                          className={`p-4 rounded-lg border-2 border-dashed min-h-[120px] transition-colors text-left ${
-                            slot.recipe
-                              ? "border-rose-300 bg-rose-50"
-                              : "border-slate-200 bg-slate-50 hover:border-rose-300 hover:bg-rose-50"
-                          }`}
-                        >
-                          <div className="text-slate-500 mb-2 capitalize">{displayName}</div>
-                          {slot.recipe ? (
-                            <div className="space-y-2">
-                              <div className="text-slate-900">{slot.recipe.title}</div>
-                              <div className="text-slate-600">{slot.recipe.calories} cal</div>
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onNavigateToRecipeSelector?.(day, mealType);
-                                  }}
-                                  className="text-rose-600 hover:text-rose-700 p-0 h-auto"
-                                >
-                                  Change
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRemoveMeal(day, mealType);
-                                  }}
-                                  className="text-red-600 hover:text-red-700 p-0 h-auto"
-                                >
-                                  Remove
-                                </Button>
-                              </div>
+                    return (
+                      <button
+                        key={slot.id}
+                        type="button"
+                        onDragOver={handleDragOver}
+                        onDrop={() => handleDrop(day, mealType)}
+                        onClick={() =>
+                          onNavigateToRecipeSelector?.(day, mealType)
+                        }
+                        className={`p-4 rounded-lg border-2 border-dashed min-h-[120px] transition-colors text-left ${
+                          slot.recipe
+                            ? "border-rose-300 bg-rose-50"
+                            : "border-slate-200 bg-slate-50 hover:border-rose-300 hover:bg-rose-50"
+                        }`}
+                      >
+                        <div className="text-slate-500 mb-2 capitalize">
+                          {displayName}
+                        </div>
+                        {slot.recipe ? (
+                          <div className="space-y-2">
+                            <div className="text-slate-900">
+                              {slot.recipe.title}
                             </div>
-                          ) : (
-                            <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                              <Plus className="h-8 w-8 mb-1" />
-                              <span className="text-slate-500">Click to add</span>
+                            <div className="text-slate-600">
+                              {slot.recipe.calories} cal
                             </div>
-                          )}
-                        </button>
-                      );
-                    }
-                  )}
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onNavigateToRecipeSelector?.(day, mealType);
+                                }}
+                                className="text-rose-600 hover:text-rose-700 p-0 h-auto"
+                              >
+                                Change
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveMeal(day, mealType);
+                                }}
+                                className="text-red-600 hover:text-red-700 p-0 h-auto"
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                            <Plus className="h-8 w-8 mb-1" />
+                            <span className="text-slate-500">Click to add</span>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

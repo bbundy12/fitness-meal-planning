@@ -6,7 +6,14 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./ui/table";
 import { Trash2 } from "lucide-react";
 import { Badge } from "./ui/badge";
 
@@ -112,21 +119,32 @@ export function InBodyScanLog() {
   };
 
   // Calculate progress deltas between two scans
-  const calculateProgress = (current: ScanEntry, previous: ScanEntry): ProgressDeltas => {
+  const calculateProgress = (
+    current: ScanEntry,
+    previous: ScanEntry,
+  ): ProgressDeltas => {
     const currentMetrics = calculateMetrics(current);
     const previousMetrics = calculateMetrics(previous);
 
     return {
-      weightChange: Math.round((current.weightLbs - previous.weightLbs) * 10) / 10,
-      fatMassChange: Math.round((currentMetrics.fatMassLbs - previousMetrics.fatMassLbs) * 10) / 10,
+      weightChange:
+        Math.round((current.weightLbs - previous.weightLbs) * 10) / 10,
+      fatMassChange:
+        Math.round(
+          (currentMetrics.fatMassLbs - previousMetrics.fatMassLbs) * 10,
+        ) / 10,
       leanMassChange:
-        Math.round((currentMetrics.leanMassLbs - previousMetrics.leanMassLbs) * 10) / 10,
-      smmChange: Math.round((currentMetrics.smmLbs - previousMetrics.smmLbs) * 10) / 10,
+        Math.round(
+          (currentMetrics.leanMassLbs - previousMetrics.leanMassLbs) * 10,
+        ) / 10,
+      smmChange:
+        Math.round((currentMetrics.smmLbs - previousMetrics.smmLbs) * 10) / 10,
     };
   };
 
   // Get latest progress (most recent vs previous scan)
-  const latestProgress = scans.length >= 2 ? calculateProgress(scans[0], scans[1]) : null;
+  const latestProgress =
+    scans.length >= 2 ? calculateProgress(scans[0], scans[1]) : null;
 
   const handleDeleteScan = (id: string) => {
     if (window.confirm("Are you sure you want to delete this scan?")) {
@@ -178,7 +196,9 @@ export function InBodyScanLog() {
                     {latestProgress.fatMassChange} lbs
                   </div>
                   {latestProgress.fatMassChange < 0 ? (
-                    <Badge className="bg-green-100 text-green-800">↓ Good</Badge>
+                    <Badge className="bg-green-100 text-green-800">
+                      ↓ Good
+                    </Badge>
                   ) : latestProgress.fatMassChange > 0 ? (
                     <Badge className="bg-rose-100 text-rose-800">↑</Badge>
                   ) : (
@@ -195,7 +215,9 @@ export function InBodyScanLog() {
                     {latestProgress.leanMassChange} lbs
                   </div>
                   {latestProgress.leanMassChange > 0 ? (
-                    <Badge className="bg-green-100 text-green-800">↑ Good</Badge>
+                    <Badge className="bg-green-100 text-green-800">
+                      ↑ Good
+                    </Badge>
                   ) : latestProgress.leanMassChange < 0 ? (
                     <Badge className="bg-rose-100 text-rose-800">↓</Badge>
                   ) : (
@@ -212,7 +234,9 @@ export function InBodyScanLog() {
                     {latestProgress.smmChange} lbs
                   </div>
                   {latestProgress.smmChange > 0 ? (
-                    <Badge className="bg-green-100 text-green-800">↑ Good</Badge>
+                    <Badge className="bg-green-100 text-green-800">
+                      ↑ Good
+                    </Badge>
                   ) : latestProgress.smmChange < 0 ? (
                     <Badge className="bg-rose-100 text-rose-800">↓</Badge>
                   ) : (
@@ -225,7 +249,10 @@ export function InBodyScanLog() {
         </Card>
       )}
 
-      <Button onClick={() => setShowForm(!showForm)} className="bg-rose-600 hover:bg-rose-700">
+      <Button
+        onClick={() => setShowForm(!showForm)}
+        className="bg-rose-600 hover:bg-rose-700"
+      >
         {showForm ? "Cancel" : "Add New Scan"}
       </Button>
 
@@ -327,7 +354,9 @@ export function InBodyScanLog() {
                 {scans.map((scan, index) => {
                   const prevScan = scans[index + 1];
                   const metrics = calculateMetrics(scan);
-                  const progress = prevScan ? calculateProgress(scan, prevScan) : null;
+                  const progress = prevScan
+                    ? calculateProgress(scan, prevScan)
+                    : null;
 
                   return (
                     <TableRow key={scan.id}>
@@ -336,7 +365,9 @@ export function InBodyScanLog() {
                       </TableCell>
                       <TableCell>
                         <div>{scan.weightLbs} lbs</div>
-                        <div className="text-slate-500">({scan.weightKg} kg)</div>
+                        <div className="text-slate-500">
+                          ({scan.weightKg} kg)
+                        </div>
                         {progress && (
                           <div className="text-slate-600">
                             {progress.weightChange > 0 ? "+" : ""}
@@ -355,8 +386,8 @@ export function InBodyScanLog() {
                               progress.fatMassChange < 0
                                 ? "text-green-600"
                                 : progress.fatMassChange > 0
-                                ? "text-rose-600"
-                                : "text-slate-600"
+                                  ? "text-rose-600"
+                                  : "text-slate-600"
                             }
                           >
                             {progress.fatMassChange > 0 ? "+" : ""}
@@ -372,8 +403,8 @@ export function InBodyScanLog() {
                               progress.leanMassChange > 0
                                 ? "text-green-600"
                                 : progress.leanMassChange < 0
-                                ? "text-rose-600"
-                                : "text-slate-600"
+                                  ? "text-rose-600"
+                                  : "text-slate-600"
                             }
                           >
                             {progress.leanMassChange > 0 ? "+" : ""}
@@ -383,15 +414,17 @@ export function InBodyScanLog() {
                       </TableCell>
                       <TableCell>
                         <div>{scan.muscleMass} kg</div>
-                        <div className="text-slate-500">({metrics.smmLbs} lbs)</div>
+                        <div className="text-slate-500">
+                          ({metrics.smmLbs} lbs)
+                        </div>
                         {progress && (
                           <div
                             className={
                               progress.smmChange > 0
                                 ? "text-green-600"
                                 : progress.smmChange < 0
-                                ? "text-rose-600"
-                                : "text-slate-600"
+                                  ? "text-rose-600"
+                                  : "text-slate-600"
                             }
                           >
                             {progress.smmChange > 0 ? "+" : ""}
@@ -402,19 +435,30 @@ export function InBodyScanLog() {
                       <TableCell>
                         {progress && (
                           <div className="flex flex-col gap-1">
-                            {progress.fatMassChange < 0 && progress.leanMassChange > 0 && (
-                              <Badge className="bg-green-100 text-green-800">Recomp ✓</Badge>
-                            )}
-                            {progress.weightChange < 0 && progress.leanMassChange >= 0 && (
-                              <Badge className="bg-green-100 text-green-800">Cutting ✓</Badge>
-                            )}
-                            {progress.leanMassChange > 0 && progress.weightChange > 0 && (
-                              <Badge className="bg-blue-100 text-blue-800">Bulking</Badge>
-                            )}
+                            {progress.fatMassChange < 0 &&
+                              progress.leanMassChange > 0 && (
+                                <Badge className="bg-green-100 text-green-800">
+                                  Recomp ✓
+                                </Badge>
+                              )}
+                            {progress.weightChange < 0 &&
+                              progress.leanMassChange >= 0 && (
+                                <Badge className="bg-green-100 text-green-800">
+                                  Cutting ✓
+                                </Badge>
+                              )}
+                            {progress.leanMassChange > 0 &&
+                              progress.weightChange > 0 && (
+                                <Badge className="bg-blue-100 text-blue-800">
+                                  Bulking
+                                </Badge>
+                              )}
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="text-slate-500">{scan.notes || "—"}</TableCell>
+                      <TableCell className="text-slate-500">
+                        {scan.notes || "—"}
+                      </TableCell>
                       <TableCell>
                         <Button
                           onClick={() => handleDeleteScan(scan.id)}

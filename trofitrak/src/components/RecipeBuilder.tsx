@@ -8,149 +8,118 @@ import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { Textarea } from "./ui/textarea";
 import { Plus, X, Edit, Trash2 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
-interface Ingredient {
+interface RecipeItem {
   id: string;
-  text: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-}
-
-interface Recipe {
-  id: string;
-  title: string;
-  servings: number;
-  instructions: string;
-  ingredients: Ingredient[];
-  totalCalories: number;
-  totalProtein: number;
-  totalCarbs: number;
-  totalFat: number;
+  ingredientId: string;
+  ingredientName: string;
+  quantity: number;
+  unit: "grams" | "serving";
 }
 
 export function RecipeBuilder() {
+  const utils = trpc.useUtils();
+  const { data: ingredients = [] } = trpc.ingredient.list.useQuery();
+  const { data: recipes = [], isLoading } = trpc.recipe.list.useQuery();
+  const createRecipeMutation = trpc.recipe.create.useMutation({
+    onSuccess: () => {
+      utils.recipe.list.invalidate();
+    },
+  });
+  const deleteRecipeMutation = trpc.recipe.delete.useMutation({
+    onSuccess: () => {
+      utils.recipe.list.invalidate();
+    },
+  });
+
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [servings, setServings] = useState("1");
   const [instructions, setInstructions] = useState("");
-  const [ingredientInput, setIngredientInput] = useState("");
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [ingredientSearch, setIngredientSearch] = useState("");
+  const [selectedIngredient, setSelectedIngredient] = useState<string | null>(
+    null,
+  );
+  const [quantity, setQuantity] = useState("");
+  const [unit, setUnit] = useState<"grams" | "serving">("serving");
+  const [recipeItems, setRecipeItems] = useState<RecipeItem[]>([]);
 
-  // Mock saved recipes
-  const [recipes, setRecipes] = useState<Recipe[]>([
-    {
-      id: "1",
-      title: "Grilled Chicken with Rice",
-      servings: 1,
-      instructions:
-        "1. Season chicken breast\n2. Grill for 6-7 minutes per side\n3. Cook rice according to package\n4. Serve together",
-      ingredients: [],
-      totalCalories: 520,
-      totalProtein: 45,
-      totalCarbs: 52,
-      totalFat: 12,
-    },
-    {
-      id: "2",
-      title: "Salmon and Sweet Potato",
-      servings: 1,
-      instructions:
-        "1. Bake salmon at 400°F for 12-15 minutes\n2. Roast sweet potato at 425°F for 25-30 minutes\n3. Season and serve",
-      ingredients: [],
-      totalCalories: 480,
-      totalProtein: 38,
-      totalCarbs: 45,
-      totalFat: 18,
-    },
-    {
-      id: "3",
-      title: "Greek Yogurt Parfait",
-      servings: 1,
-      instructions:
-        "1. Layer Greek yogurt in a bowl\n2. Add berries\n3. Top with granola\n4. Drizzle with honey",
-      ingredients: [],
-      totalCalories: 280,
-      totalProtein: 24,
-      totalCarbs: 36,
-      totalFat: 6,
-    },
-  ]);
-
-  // Mock Nutritionix API call
-  const fetchNutritionInfo = (input: string): Ingredient => {
-    // Simple mock responses
-    const mockData: { [key: string]: Partial<Ingredient> } = {
-      rice: { calories: 206, protein: 4.3, carbs: 45, fat: 0.4 },
-      chicken: { calories: 165, protein: 31, carbs: 0, fat: 3.6 },
-      salmon: { calories: 208, protein: 20, carbs: 0, fat: 13 },
-      "sweet potato": { calories: 112, protein: 2, carbs: 26, fat: 0.1 },
-      yogurt: { calories: 100, protein: 17, carbs: 7, fat: 0.7 },
-    };
-
-    let matched = mockData.rice;
-    for (const [key, value] of Object.entries(mockData)) {
-      if (input.toLowerCase().includes(key)) {
-        matched = value;
-        break;
-      }
-    }
-
-    return {
-      id: Date.now().toString(),
-      text: input,
-      calories: matched.calories || 100,
-      protein: matched.protein || 5,
-      carbs: matched.carbs || 15,
-      fat: matched.fat || 3,
-    };
-  };
+  const filteredIngredients = ingredients.filter((ing: { name: string }) =>
+    ing.name.toLowerCase().includes(ingredientSearch.toLowerCase()),
+  );
 
   const handleAddIngredient = () => {
-    if (!ingredientInput.trim()) return;
-    const ingredient = fetchNutritionInfo(ingredientInput);
-    setIngredients([...ingredients, ingredient]);
-    setIngredientInput("");
+    if (!selectedIngredient || !quantity) return;
+    const ingredient = ingredients.find(
+      (ing: { id: string }) => ing.id === selectedIngredient,
+    );
+    if (!ingredient) return;
+
+    const newItem: RecipeItem = {
+      id: `${selectedIngredient}-${Date.now()}`,
+      ingredientId: selectedIngredient,
+      ingredientName: ingredient.name,
+      quantity: parseFloat(quantity),
+      unit,
+    };
+    setRecipeItems([...recipeItems, newItem]);
+    setSelectedIngredient(null);
+    setQuantity("");
+    setIngredientSearch("");
   };
 
   const handleRemoveIngredient = (id: string) => {
-    setIngredients(ingredients.filter((ing) => ing.id !== id));
+    setRecipeItems(recipeItems.filter((item) => item.id !== id));
   };
 
   const calculateTotals = () => {
-    return ingredients.reduce(
-      (acc, ing) => ({
-        calories: acc.calories + ing.calories,
-        protein: acc.protein + ing.protein,
-        carbs: acc.carbs + ing.carbs,
-        fat: acc.fat + ing.fat,
-      }),
-      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    return recipeItems.reduce(
+      (acc, item) => {
+        const ingredient = ingredients.find(
+          (ing) => ing.id === item.ingredientId,
+        );
+        if (!ingredient) return acc;
+
+        let factor = 1;
+        if (item.unit === "serving") {
+          factor = item.quantity;
+        } else {
+          // grams
+          factor = item.quantity / ingredient.gramsPerServing;
+        }
+
+        return {
+          calories: acc.calories + ingredient.calories * factor,
+          protein: acc.protein + ingredient.protein * factor,
+          carbs: acc.carbs + ingredient.carbs * factor,
+          fat: acc.fat + ingredient.fat * factor,
+        };
+      },
+      { calories: 0, protein: 0, carbs: 0, fat: 0 },
     );
   };
 
   const servingsCount = Math.max(parseInt(servings, 10) || 1, 1);
 
   const handleSaveRecipe = () => {
-    if (!title.trim()) return;
-    const totals = calculateTotals();
-    const newRecipe: Recipe = {
-      id: Date.now().toString(),
+    if (!title.trim() || recipeItems.length === 0) return;
+
+    createRecipeMutation.mutate({
       title,
       servings: servingsCount,
       instructions,
-      ingredients: [...ingredients],
-      totalCalories: Math.round(totals.calories),
-      totalProtein: Math.round(totals.protein),
-      totalCarbs: Math.round(totals.carbs),
-      totalFat: Math.round(totals.fat),
-    };
-    setRecipes([newRecipe, ...recipes]);
+      items: recipeItems.map((item) => ({
+        ingredientId: item.ingredientId,
+        quantity: item.quantity,
+        unit: item.unit,
+      })),
+    });
+
     setTitle("");
     setServings("1");
     setInstructions("");
-    setIngredients([]);
+    setRecipeItems([]);
     setShowForm(false);
   };
 
@@ -170,7 +139,10 @@ export function RecipeBuilder() {
           Create and manage your recipes with automatic macro calculations
         </p>
       </div>
-      <Button onClick={() => setShowForm(!showForm)} className="bg-rose-600 hover:bg-rose-700">
+      <Button
+        onClick={() => setShowForm(!showForm)}
+        className="bg-rose-600 hover:bg-rose-700"
+      >
         {showForm ? (
           "Cancel"
         ) : (
@@ -212,63 +184,140 @@ export function RecipeBuilder() {
 
             <div className="space-y-2">
               <Label htmlFor="ingredient">Add Ingredients</Label>
-              <div className="flex gap-2">
+              <div className="space-y-2">
                 <Input
                   id="ingredient"
-                  value={ingredientInput}
-                  onChange={(e) => setIngredientInput(e.target.value)}
-                  placeholder="e.g., 1 cup rice, 6 oz chicken breast"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddIngredient();
-                    }
+                  value={ingredientSearch}
+                  onChange={(e) => {
+                    setIngredientSearch(e.target.value);
+                    setSelectedIngredient(null);
                   }}
+                  placeholder="Search for ingredient..."
                 />
-                <Button type="button" onClick={handleAddIngredient} variant="outline">
-                  <Plus className="h-4 w-4" />
-                </Button>
+                {ingredientSearch &&
+                  filteredIngredients.length > 0 &&
+                  !selectedIngredient && (
+                    <div className="border border-slate-200 rounded-lg p-2 max-h-48 overflow-y-auto">
+                      {filteredIngredients
+                        .slice(0, 5)
+                        .map((ing: (typeof ingredients)[0]) => (
+                          <button
+                            key={ing.id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 hover:bg-slate-100 rounded"
+                            onClick={() => {
+                              setSelectedIngredient(ing.id);
+                              setIngredientSearch(ing.name);
+                            }}
+                          >
+                            <div className="text-slate-900">{ing.name}</div>
+                            <div className="text-slate-500">
+                              {ing.servingSize} {ing.servingUnit} •{" "}
+                              {ing.calories} cal
+                            </div>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                {selectedIngredient && (
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      placeholder="Quantity"
+                      className="w-32"
+                    />
+                    <select
+                      value={unit}
+                      onChange={(e) =>
+                        setUnit(e.target.value as "grams" | "serving")
+                      }
+                      className="border border-slate-300 rounded px-3"
+                    >
+                      <option value="serving">Serving</option>
+                      <option value="grams">Grams</option>
+                    </select>
+                    <Button
+                      type="button"
+                      onClick={handleAddIngredient}
+                      variant="outline"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
               <p className="text-slate-500">
-                Type ingredient with quantity (e.g., "1 cup rice") and press Enter or click +
+                Search for an ingredient, then enter quantity and unit
               </p>
             </div>
 
             {/* Ingredients List */}
-            {ingredients.length > 0 && (
+            {recipeItems.length > 0 && (
               <div className="space-y-2">
-                <Label>Ingredients ({ingredients.length})</Label>
+                <Label>Ingredients ({recipeItems.length})</Label>
                 <div className="space-y-2">
-                  {ingredients.map((ing) => (
-                    <div
-                      key={ing.id}
-                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                    >
-                      <div>
-                        <div className="text-slate-900">{ing.text}</div>
-                        <div className="text-slate-500 flex gap-3">
-                          <span>{ing.calories} cal</span>
-                          <span>P: {ing.protein}g</span>
-                          <span>C: {ing.carbs}g</span>
-                          <span>F: {ing.fat}g</span>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveIngredient(ing.id)}
+                  {recipeItems.map((item) => {
+                    const ingredient = ingredients.find(
+                      (ing: { id: string }) => ing.id === item.ingredientId,
+                    );
+                    if (!ingredient) return null;
+
+                    let factor = 1;
+                    if (item.unit === "serving") {
+                      factor = item.quantity;
+                    } else {
+                      factor = item.quantity / ingredient.gramsPerServing;
+                    }
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
                       >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                        <div>
+                          <div className="text-slate-900">
+                            {item.ingredientName} ({item.quantity} {item.unit})
+                          </div>
+                          <div className="text-slate-500 flex gap-3">
+                            <span>
+                              {Math.round(ingredient.calories * factor)} cal
+                            </span>
+                            <span>
+                              P:{" "}
+                              {Math.round(ingredient.protein * factor * 10) /
+                                10}
+                              g
+                            </span>
+                            <span>
+                              C:{" "}
+                              {Math.round(ingredient.carbs * factor * 10) / 10}g
+                            </span>
+                            <span>
+                              F: {Math.round(ingredient.fat * factor * 10) / 10}
+                              g
+                            </span>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveIngredient(item.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
             {/* Macro Summary */}
-            {ingredients.length > 0 && (
+            {recipeItems.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-rose-50 rounded-lg">
                 <div>
                   <p className="text-slate-500">Calories/serving</p>
@@ -301,7 +350,7 @@ export function RecipeBuilder() {
             <Button
               onClick={handleSaveRecipe}
               className="bg-rose-600 hover:bg-rose-700"
-              disabled={!title.trim() || ingredients.length === 0}
+              disabled={!title.trim() || recipeItems.length === 0}
             >
               Save Recipe
             </Button>
@@ -312,57 +361,97 @@ export function RecipeBuilder() {
       {/* Saved Recipes */}
       <div>
         <h3 className="mb-4">Saved Recipes ({recipes.length})</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {recipes.map((recipe) => (
-            <Card key={recipe.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-start justify-between">
-                  <span>{recipe.title}</span>
-                  <Badge variant="outline">
-                    {recipe.servings} serving{recipe.servings > 1 ? "s" : ""}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="text-slate-500">Calories</p>
-                    <div className="text-slate-900">{recipe.totalCalories}</div>
+        {isLoading ? (
+          <div className="text-center py-8 text-slate-500">Loading...</div>
+        ) : recipes.length === 0 ? (
+          <div className="text-center py-8 text-slate-500">
+            No recipes yet. Create one above!
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recipes.map((recipe: (typeof recipes)[0]) => (
+              <Card
+                key={recipe.id}
+                className="hover:shadow-md transition-shadow"
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-start justify-between">
+                    <span>{recipe.title}</span>
+                    <Badge variant="outline">
+                      {recipe.servings} serving{recipe.servings > 1 ? "s" : ""}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-slate-500">Calories</p>
+                      <div className="text-slate-900">
+                        {Math.round(recipe.calories)}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Protein</p>
+                      <div className="text-slate-900">
+                        {Math.round(recipe.protein)}g
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Carbs</p>
+                      <div className="text-slate-900">
+                        {Math.round(recipe.carbs)}g
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Fat</p>
+                      <div className="text-slate-900">
+                        {Math.round(recipe.fat)}g
+                      </div>
+                    </div>
                   </div>
+                  {recipe.description && (
+                    <div>
+                      <p className="text-slate-500">Description</p>
+                      <p className="text-slate-900 line-clamp-2">
+                        {recipe.description}
+                      </p>
+                    </div>
+                  )}
+                  {recipe.instructions && (
+                    <div>
+                      <p className="text-slate-500">Instructions</p>
+                      <p className="text-slate-900 whitespace-pre-line line-clamp-3">
+                        {recipe.instructions}
+                      </p>
+                    </div>
+                  )}
                   <div>
-                    <p className="text-slate-500">Protein</p>
-                    <div className="text-slate-900">{recipe.totalProtein}g</div>
-                  </div>
-                  <div>
-                    <p className="text-slate-500">Carbs</p>
-                    <div className="text-slate-900">{recipe.totalCarbs}g</div>
-                  </div>
-                  <div>
-                    <p className="text-slate-500">Fat</p>
-                    <div className="text-slate-900">{recipe.totalFat}g</div>
-                  </div>
-                </div>
-                {recipe.instructions && (
-                  <div>
-                    <p className="text-slate-500">Instructions</p>
-                    <p className="text-slate-900 whitespace-pre-line line-clamp-3">
-                      {recipe.instructions}
+                    <p className="text-slate-500">Ingredients</p>
+                    <p className="text-slate-900">
+                      {recipe.items.length} items
                     </p>
                   </div>
-                )}
-                <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1">
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" size="sm" className="flex-1">
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() =>
+                        deleteRecipeMutation.mutate({ id: recipe.id })
+                      }
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
