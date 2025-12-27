@@ -8,6 +8,7 @@
 ## Overview
 
 Phase 4A adds **InBody scan tracking** to TroFiTrak, enabling users to:
+
 - Log body composition scans (weight, body fat %, skeletal muscle mass)
 - View progress over time with interactive charts
 - See latest scan summary on the Dashboard
@@ -45,6 +46,7 @@ model InBodyScan {
 ```
 
 **Key Design Decisions:**
+
 - `scanDate` stored as DateTime for flexibility (can add time-of-day later)
 - Weight stored in lbs (user's primary unit), converted to kg in UI as needed
 - Skeletal muscle mass stored in kg (InBody scan standard unit)
@@ -57,65 +59,80 @@ model InBodyScan {
 Created complete CRUD router with 5 procedures:
 
 #### **list**
+
 Query all scans with optional date filtering:
+
 ```typescript
-trpc.inbody.list.useQuery({ 
-  from: "2025-01-01",  // Optional
-  to: "2025-01-31"     // Optional
+trpc.inbody.list.useQuery({
+  from: "2025-01-01", // Optional
+  to: "2025-01-31", // Optional
 });
 ```
+
 - Returns scans ordered by `scanDate` ascending (oldest first)
 - Date range filtering converts ISO strings to Date objects
 - Supports unbounded queries (all scans)
 
 #### **latest**
+
 Get the most recent scan:
+
 ```typescript
 trpc.inbody.latest.useQuery();
 ```
+
 - Returns single scan ordered by `scanDate` desc
 - Used by Dashboard to show latest metrics
 - Returns `null` if no scans exist
 
 #### **create**
+
 Add new scan:
+
 ```typescript
 trpc.inbody.create.useMutation({
   onSuccess: () => {
     utils.inbody.list.invalidate();
     utils.inbody.latest.invalidate();
-  }
+  },
 });
 ```
+
 - Validates weightLbs > 0
 - Validates bodyFatPercent between 0-100
 - Validates skeletalMuscleMassKg > 0
 - Auto-generates ID and timestamps
 
 #### **update**
+
 Edit existing scan:
+
 ```typescript
 trpc.inbody.update.useMutation({
   onSuccess: () => {
     utils.inbody.list.invalidate();
     utils.inbody.latest.invalidate();
-  }
+  },
 });
 ```
+
 - All fields optional except `id`
 - User can only update their own scans
 - Validates same constraints as create
 
 #### **delete**
+
 Remove scan:
+
 ```typescript
 trpc.inbody.delete.useMutation({
   onSuccess: () => {
     utils.inbody.list.invalidate();
     utils.inbody.latest.invalidate();
-  }
+  },
 });
 ```
+
 - User can only delete their own scans
 - Confirms deletion with window.confirm()
 
@@ -129,6 +146,7 @@ trpc.inbody.delete.useMutation({
 #### Key Features
 
 **Progress Summary Card**
+
 - Shows changes between most recent and previous scan
 - Displays 4 metrics with color-coded badges:
   - Weight change (green ↓ for loss, rose ↑ for gain)
@@ -137,11 +155,13 @@ trpc.inbody.delete.useMutation({
   - Muscle mass change (green "↑ Good" for gain)
 
 **Three Progress Charts** (Recharts LineChart)
+
 1. **Weight Progress**: Red line chart showing weight trends
 2. **Body Fat %**: Orange line chart showing BF% trends
 3. **Skeletal Muscle Mass**: Green line chart showing SMM trends (converted to lbs for display)
 
 Chart Features:
+
 - Responsive design (100% width, 200px height)
 - Grid lines with `strokeDasharray="3 3"`
 - Dynamic Y-axis domains (dataMin/dataMax ± buffer)
@@ -149,6 +169,7 @@ Chart Features:
 - Only shown when 2+ scans exist
 
 **Add Scan Form**
+
 - Toggle show/hide with "Add New Scan" button
 - Required fields: weight (lbs), body fat %, muscle mass (kg)
 - Optional: notes textarea
@@ -156,6 +177,7 @@ Chart Features:
 - Submits to `create` mutation, invalidates queries
 
 **Scan History Table**
+
 - Displays all scans newest → oldest (reversed from DB order)
 - Columns:
   - Date
@@ -171,18 +193,20 @@ Chart Features:
 - Color-coded deltas (green/rose based on direction)
 
 **Calculated Metrics**
+
 ```typescript
 // Fat Mass = Body Weight × (Body Fat % / 100)
-fatMassLbs = weightLbs * (bodyFatPercent / 100)
+fatMassLbs = weightLbs * (bodyFatPercent / 100);
 
 // Lean Mass = Body Weight - Fat Mass
-leanMassLbs = weightLbs - fatMassLbs
+leanMassLbs = weightLbs - fatMassLbs;
 
 // SMM in lbs (convert from kg)
-smmLbs = skeletalMuscleMassKg * 2.20462
+smmLbs = skeletalMuscleMassKg * 2.20462;
 ```
 
 **Progress Badges Logic**
+
 - **Recomp ✓** (green): Fat mass ↓ AND lean mass ↑
 - **Cutting ✓** (green): Weight ↓ AND lean mass maintained (≥ 0)
 - **Bulking** (blue): Lean mass ↑ AND weight ↑
@@ -194,6 +218,7 @@ smmLbs = skeletalMuscleMassKg * 2.20462
 Added **Latest InBody Scan** card with dynamic states:
 
 **When scan exists:**
+
 ```
 ┌─────────────────────────────────────────┐
 │ 🔴 Latest InBody Scan                   │
@@ -206,6 +231,7 @@ Added **Latest InBody Scan** card with dynamic states:
 ```
 
 **When no scans:**
+
 ```
 ┌─────────────────────────────────────────┐
 │ 🔴 Latest InBody Scan                   │
@@ -218,6 +244,7 @@ Added **Latest InBody Scan** card with dynamic states:
 ```
 
 **Implementation Details:**
+
 - Uses `trpc.inbody.latest.useQuery()` for latest scan
 - Shows loading state while fetching
 - 4-column grid for scan metrics
@@ -291,6 +318,7 @@ const chartData = [...scans].reverse().map((scan) => {
 ```
 
 **Why reverse?**
+
 - DB returns scans oldest → newest (ORDER BY scanDate ASC)
 - History table displays newest → oldest (better UX)
 - Charts need chronological left → right
@@ -300,14 +328,15 @@ const chartData = [...scans].reverse().map((scan) => {
 
 ```typescript
 // Weight: lbs ↔ kg
-weightKg = weightLbs * 0.453592
-weightLbs = weightKg / 0.453592
+weightKg = weightLbs * 0.453592;
+weightLbs = weightKg / 0.453592;
 
 // Skeletal Muscle Mass: kg → lbs
-smmLbs = smmKg * 2.20462
+smmLbs = smmKg * 2.20462;
 ```
 
 **Storage vs Display:**
+
 - **Store:** weightLbs (user's primary), skeletalMuscleMassKg (InBody standard)
 - **Display:** Show both units with conversions
 - **Charts:** Convert SMM to lbs for consistency with weight chart
@@ -317,6 +346,7 @@ smmLbs = smmKg * 2.20462
 ## Testing Sequence
 
 ### ⚠️ Prerequisites
+
 - User must set up PostgreSQL database
 - Update `.env.local` with `DATABASE_URL`
 - Run pending migrations (see Migration Command below)
@@ -332,6 +362,7 @@ Creates migration file for InBodyScan table.
 ### 2. Add First Scan
 
 **Steps:**
+
 1. Navigate to Dashboard
 2. Click "Add First Scan" in Latest InBody card (or go to InBody page)
 3. Fill form:
@@ -342,6 +373,7 @@ Creates migration file for InBodyScan table.
 4. Click "Save Scan"
 
 **Expected:**
+
 - Form clears and closes
 - Scan appears in History table
 - Dashboard shows latest scan card
@@ -350,6 +382,7 @@ Creates migration file for InBodyScan table.
 ### 3. Add Second Scan
 
 **Steps:**
+
 1. Add another scan with different values:
    - Weight: 163.2 lbs
    - Body Fat: 17.8%
@@ -357,6 +390,7 @@ Creates migration file for InBodyScan table.
    - Notes: "One month progress"
 
 **Expected:**
+
 - Progress Summary card appears (latest vs previous)
 - Three charts render with 2 data points each
 - Progress badges show in History table ("Recomp ✓" expected)
@@ -365,11 +399,13 @@ Creates migration file for InBodyScan table.
 ### 4. Test Progress Calculations
 
 **Add third scan:**
+
 - Weight: 161.0 lbs (-2.2 from previous)
 - Body Fat: 17.2% (-0.6)
 - SMM: 73.5 kg (+0.4)
 
 **Verify Progress Summary:**
+
 - Weight Change: -2.2 lbs (green ↓)
 - Fat Mass Change: ~-1.5 lbs (green "↓ Good")
 - Lean Mass Change: ~-0.7 lbs (should be close to 0 for clean cut)
@@ -378,6 +414,7 @@ Creates migration file for InBodyScan table.
 ### 5. Test Charts
 
 **Verify:**
+
 - Weight chart shows downward trend (red line)
 - Body fat chart shows downward trend (orange line)
 - Muscle mass chart shows upward trend (green line)
@@ -387,6 +424,7 @@ Creates migration file for InBodyScan table.
 ### 6. Test Delete
 
 **Steps:**
+
 1. Click delete icon on middle scan
 2. Confirm deletion
 3. Verify scan removed from table
@@ -395,6 +433,7 @@ Creates migration file for InBodyScan table.
 ### 7. Test Dashboard Card
 
 **Verify:**
+
 - Shows most recent scan date
 - Shows current weight, BF%, SMM
 - "View All Scans" button navigates to /inbody
@@ -407,14 +446,16 @@ Creates migration file for InBodyScan table.
 ### Queries
 
 #### `trpc.inbody.list`
+
 ```typescript
 const { data: scans, isLoading } = trpc.inbody.list.useQuery({
-  from?: string,  // ISO date "YYYY-MM-DD"
-  to?: string     // ISO date "YYYY-MM-DD"
+  from: string, // ISO date "YYYY-MM-DD"
+  to: string, // ISO date "YYYY-MM-DD"
 });
 ```
 
 **Returns:**
+
 ```typescript
 {
   id: string;
@@ -426,10 +467,12 @@ const { data: scans, isLoading } = trpc.inbody.list.useQuery({
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
-}[]
+}
+[];
 ```
 
 #### `trpc.inbody.latest`
+
 ```typescript
 const { data: latestScan } = trpc.inbody.latest.useQuery();
 ```
@@ -439,12 +482,13 @@ const { data: latestScan } = trpc.inbody.latest.useQuery();
 ### Mutations
 
 #### `trpc.inbody.create`
+
 ```typescript
 const createMutation = trpc.inbody.create.useMutation({
   onSuccess: () => {
     utils.inbody.list.invalidate();
     utils.inbody.latest.invalidate();
-  }
+  },
 });
 
 createMutation.mutate({
@@ -452,35 +496,37 @@ createMutation.mutate({
   weightLbs: 165.5,
   bodyFatPercent: 18.5,
   skeletalMuscleMassKg: 72.3,
-  notes?: "Optional notes"
+  notes: "Optional notes",
 });
 ```
 
 #### `trpc.inbody.update`
+
 ```typescript
 const updateMutation = trpc.inbody.update.useMutation({
   onSuccess: () => {
     utils.inbody.list.invalidate();
     utils.inbody.latest.invalidate();
-  }
+  },
 });
 
 updateMutation.mutate({
   id: "scan_id",
-  weightLbs?: 164.0,
-  bodyFatPercent?: 18.0,
-  skeletalMuscleMassKg?: 72.5,
-  notes?: "Updated notes"
+  weightLbs: 164.0,
+  bodyFatPercent: 18.0,
+  skeletalMuscleMassKg: 72.5,
+  notes: "Updated notes",
 });
 ```
 
 #### `trpc.inbody.delete`
+
 ```typescript
 const deleteMutation = trpc.inbody.delete.useMutation({
   onSuccess: () => {
     utils.inbody.list.invalidate();
     utils.inbody.latest.invalidate();
-  }
+  },
 });
 
 deleteMutation.mutate({ id: "scan_id" });
@@ -491,36 +537,42 @@ deleteMutation.mutate({ id: "scan_id" });
 ## Architecture Decisions
 
 ### 1. Why Store Weight in lbs?
+
 - User's primary preference (US-based)
 - InBody scans show both, but user thinks in lbs
 - Convert to kg for display only
 - Easier mental model for US users
 
 ### 2. Why Store SMM in kg?
+
 - InBody scan native unit
 - Industry standard for body composition
 - Avoids conversion errors on input
 - Convert to lbs for charts (consistency with weight)
 
 ### 3. Why Separate Charts Instead of Combined?
+
 - Different Y-axis scales (weight: 150-170, BF%: 15-20)
 - Easier to read individual trends
 - Mobile-friendly responsive grid
 - User can focus on one metric at a time
 
 ### 4. Why Reverse Scan Order?
+
 - Newest scans most relevant → show first in table
 - Chronological order needed for charts (left = older)
 - Single reverse operation more efficient than sorting twice
 - Matches user expectations (newest on top)
 
 ### 5. Why Calculate Metrics Client-Side?
+
 - Fat mass, lean mass derived from weight + BF%
 - No need to store redundant data
 - Calculations lightweight (2 multiplications)
 - Easier to update formula if needed
 
 ### 6. Why No Optimistic Updates?
+
 - Scans added infrequently (weekly/monthly)
 - Create mutation fast enough (~100-200ms)
 - Charts need real data to render correctly
@@ -531,45 +583,51 @@ deleteMutation.mutate({ id: "scan_id" });
 ## Known Behaviors & Limitations
 
 ### Current Scope (v1)
+
 ✅ Add, view, delete scans  
 ✅ Three progress charts  
 ✅ Latest scan on Dashboard  
 ✅ Progress calculations with badges  
-✅ Notes field for observations  
+✅ Notes field for observations
 
 ### Not Included (Future Enhancements)
+
 ❌ Edit existing scans (update mutation created but not in UI)  
 ❌ Export scan history to CSV  
 ❌ Goal tracking (target weight, BF%)  
 ❌ Photo uploads for visual comparison  
 ❌ Advanced analytics (rate of change, predictions)  
 ❌ Multiple chart timeframes (last 3 months, 6 months, year)  
-❌ Comparison mode (side-by-side scans)  
+❌ Comparison mode (side-by-side scans)
 
 ### Edge Cases Handled
+
 - **No scans:** Shows empty state with "Add First Scan" CTA
 - **One scan:** No charts, no progress card (need 2+ for comparison)
 - **Two scans:** Shows charts and progress (minimal data)
 - **Many scans:** Charts auto-scale, table scrolls horizontally on mobile
 
 ### Potential Issues
+
 - **Chart readability:** Too many data points (>20 scans) may crowd X-axis
-  - *Mitigation:* Recharts handles auto-spacing, but may need date picker later
+  - _Mitigation:_ Recharts handles auto-spacing, but may need date picker later
 - **Large notes:** No character limit, could break layout
-  - *Mitigation:* Textarea UI constrains visual height, wraps text
+  - _Mitigation:_ Textarea UI constrains visual height, wraps text
 - **Timezone handling:** scanDate stored as UTC, displayed in local
-  - *Current:* User enters date (no time), stored as midnight UTC
-  - *Future:* May need explicit timezone selection
+  - _Current:_ User enters date (no time), stored as midnight UTC
+  - _Future:_ May need explicit timezone selection
 
 ---
 
 ## Files Modified/Created
 
 ### Created
+
 - `src/server/trpc/routers/inbody.ts` (175 lines)
 - `PHASE4A_COMPLETE.md` (this file)
 
 ### Modified
+
 - `prisma/schema.prisma`: Added InBodyScan model (15 lines)
 - `src/server/trpc/root.ts`: Added inbody router to appRouter (2 lines)
 - `src/components/InBodyScanLog.tsx`: Complete refactor (575 lines → 550 lines)
@@ -582,6 +640,7 @@ deleteMutation.mutate({ id: "scan_id" });
   - Replaced static card with dynamic data display
 
 ### Unchanged
+
 - All other routers (ingredient, recipe, mealPlan, shopping)
 - All other components (MealPlanner, RecipeBuilder, etc.)
 - No new dependencies (Recharts already installed in Phase 0)
@@ -591,21 +650,27 @@ deleteMutation.mutate({ id: "scan_id" });
 ## Quality Checks
 
 ### TypeScript
+
 ```bash
 pnpm typecheck
 ```
+
 ✅ No errors (0 issues)
 
 ### Linting
+
 ```bash
 pnpm lint
 ```
+
 ✅ No warnings (52 files checked)
 
 ### Formatting
+
 ```bash
 pnpm format
 ```
+
 ✅ Fixed 6 files automatically (trailing commas, spacing)
 
 ---
@@ -633,7 +698,9 @@ pnpm prisma:studio  # Open Prisma Studio to see InBodyScan table
 ## What's Next?
 
 ### Phase 4A Complete ✅
+
 All planned features implemented:
+
 - ✅ InBodyScan model in database
 - ✅ inbody tRPC router with 5 procedures
 - ✅ InBodyScanLog refactored with charts
@@ -641,9 +708,11 @@ All planned features implemented:
 - ✅ All checks passing (typecheck, lint, format)
 
 ### User Requested: STOP Here
+
 Phase 4A is the stopping point per user directive.
 
 ### Potential Phase 5 (If Requested)
+
 - Advanced meal plan features (weekly templates, copy weeks)
 - Macro tracking per day with % of goal visualization
 - Recipe tagging/categories/favorites
@@ -658,22 +727,26 @@ Phase 4A is the stopping point per user directive.
 If issues arise during testing:
 
 **Database connection errors:**
+
 ```bash
 # Verify .env.local has correct DATABASE_URL
 pnpm prisma:studio  # Should open without errors
 ```
 
 **Type errors after migration:**
+
 ```bash
 pnpm prisma:generate  # Regenerate Prisma Client
 ```
 
 **Charts not rendering:**
+
 - Verify at least 2 scans exist
 - Check browser console for Recharts errors
 - Ensure Recharts is installed: `pnpm list recharts`
 
 **Progress calculations seem wrong:**
+
 - Double-check weight unit consistency (all lbs)
 - Verify BF% is decimal (18.5, not 0.185)
 - Check SMM conversion (kg × 2.20462 = lbs)
