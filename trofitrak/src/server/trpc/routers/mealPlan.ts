@@ -2,7 +2,14 @@ import { z } from "zod";
 import { publicProcedure, router } from "../trpc";
 import { getWeekStartDate } from "../../../lib/week";
 
-const mealSlotEnum = z.enum(["BREAKFAST", "SNACK1", "LUNCH", "SNACK2", "DINNER", "SNACK3"]);
+const mealSlotEnum = z.enum([
+  "BREAKFAST",
+  "SNACK1",
+  "LUNCH",
+  "SNACK2",
+  "DINNER",
+  "SNACK3",
+]);
 
 export const mealPlanRouter = router({
   getWeek: publicProcedure
@@ -58,7 +65,7 @@ export const mealPlanRouter = router({
         slot: mealSlotEnum,
         recipeId: z.string(),
         servingsMult: z.number().min(0.1).max(10).default(1),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const weekDate = new Date(input.weekStartDate);
@@ -123,7 +130,7 @@ export const mealPlanRouter = router({
         weekStartDate: z.string(),
         dayOfWeek: z.number().min(0).max(6),
         slot: mealSlotEnum,
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const weekDate = new Date(input.weekStartDate);
@@ -175,7 +182,7 @@ export const mealPlanRouter = router({
       z.object({
         weekStartDate: z.string(),
         fromDayOfWeek: z.number().min(0).max(6),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const weekDate = new Date(input.weekStartDate);
@@ -219,7 +226,9 @@ export const mealPlanRouter = router({
 
       // Copy items to other days
       const sourceItems = week.items;
-      const targetDays = [0, 1, 2, 3, 4, 5, 6].filter((d) => d !== input.fromDayOfWeek);
+      const targetDays = [0, 1, 2, 3, 4, 5, 6].filter(
+        (d) => d !== input.fromDayOfWeek,
+      );
 
       for (const targetDay of targetDays) {
         for (const sourceItem of sourceItems) {

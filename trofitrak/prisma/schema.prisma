@@ -42,6 +42,7 @@ model Ingredient {
   updatedAt       DateTime         @updatedAt
 
   recipeItems     RecipeItem[]
+  shoppingListItems ShoppingListItemState[]
 }
 
 model Recipe {
@@ -115,4 +116,42 @@ model MealPlanItem {
   @@index([weekId])
   @@index([recipeId])
   @@unique([weekId, dayOfWeek, slot])
+}
+
+model ShoppingListState {
+  id            String   @id @default(cuid())
+  userId        String
+  weekStartDate DateTime
+
+  items         ShoppingListItemState[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, weekStartDate])
+  @@index([userId, weekStartDate])
+}
+
+model ShoppingListItemState {
+  id          String   @id @default(cuid())
+  stateId     String
+
+  // Either linked to a real ingredient OR a custom string item
+  ingredientId String?
+  customName   String?
+
+  checked     Boolean  @default(false)
+
+  // Used only for custom items, optional quantity display
+  quantity    Float?
+  unit        String?
+
+  state       ShoppingListState @relation(fields: [stateId], references: [id], onDelete: Cascade)
+  ingredient  Ingredient?       @relation(fields: [ingredientId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // One state row per ingredient (prevents dup saved states)
+  @@unique([stateId, ingredientId])
 }

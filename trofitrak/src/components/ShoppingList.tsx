@@ -4,106 +4,169 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
-import { Download, RefreshCw } from "lucide-react";
+import { Download, RefreshCw, Plus, X } from "lucide-react";
 import { Badge } from "./ui/badge";
-
-interface ShoppingItem {
-  id: string;
-  name: string;
-  quantity: string;
-  checked: boolean;
-}
-
-interface ShoppingCategory {
-  category: string;
-  items: ShoppingItem[];
-}
+import { Input } from "./ui/input";
+import { trpc } from "@/lib/trpc";
+import { getCurrentWeekStart } from "@/lib/week";
 
 export function ShoppingList() {
-  const [shoppingList, setShoppingList] = useState<ShoppingCategory[]>([
-    {
-      category: "Protein",
-      items: [
-        { id: "1", name: "Chicken Breast", quantity: "3 lbs", checked: false },
-        { id: "2", name: "Salmon Fillets", quantity: "2 lbs", checked: false },
-        { id: "3", name: "Ground Turkey", quantity: "1 lb", checked: false },
-        { id: "4", name: "Eggs", quantity: "2 dozen", checked: false },
-      ],
-    },
-    {
-      category: "Produce",
-      items: [
-        { id: "5", name: "Sweet Potatoes", quantity: "5 lbs", checked: false },
-        { id: "6", name: "Broccoli", quantity: "2 heads", checked: false },
-        { id: "7", name: "Spinach", quantity: "1 bag", checked: false },
-        { id: "8", name: "Bananas", quantity: "6", checked: false },
-      ],
-    },
-    {
-      category: "Grains & Carbs",
-      items: [
-        { id: "9", name: "Brown Rice", quantity: "2 lbs", checked: false },
-        { id: "10", name: "Oats", quantity: "1 container", checked: false },
-        {
-          id: "11",
-          name: "Whole Wheat Bread",
-          quantity: "1 loaf",
-          checked: false,
-        },
-      ],
-    },
-    {
-      category: "Dairy",
-      items: [
-        { id: "12", name: "Greek Yogurt", quantity: "32 oz", checked: false },
-        { id: "13", name: "Cottage Cheese", quantity: "16 oz", checked: false },
-        {
-          id: "14",
-          name: "Almond Milk",
-          quantity: "1 half gallon",
-          checked: false,
-        },
-      ],
-    },
-    {
-      category: "Pantry",
-      items: [
-        { id: "15", name: "Olive Oil", quantity: "1 bottle", checked: false },
-        {
-          id: "16",
-          name: "Protein Powder",
-          quantity: "1 container",
-          checked: false,
-        },
-        { id: "17", name: "Almonds", quantity: "1 bag", checked: false },
-      ],
-    },
-  ]);
+  const [weekStartDate] = useState(() => getCurrentWeekStart());
+  const [customItemName, setCustomItemName] = useState("");
+  const [customItemQuantity, setCustomItemQuantity] = useState("");
+  const [customItemUnit, setCustomItemUnit] = useState("");
 
-  const handleToggleItem = (categoryIndex: number, itemId: string) => {
-    const newList = [...shoppingList];
-    const item = newList[categoryIndex].items.find((i) => i.id === itemId);
-    if (item) {
-      item.checked = !item.checked;
-      setShoppingList(newList);
-    }
+  const utils = trpc.useUtils();
+
+  // Fetch shopping list for current week
+  const { data: shoppingData } = trpc.shopping.getWeekList.useQuery({
+    weekStartDate,
+  });
+
+  // Mutations
+  const toggleCheckedMutation = trpc.shopping.toggleChecked.useMutation({
+    onMutate: async (variables) => {
+      await utils.shopping.getWeekList.cancel({ weekStartDate });
+      const prev = utils.shopping.getWeekList.getData({ weekStartDate });
+
+      utils.shopping.getWeekList.setData({ weekStartDate }, (old) => {
+        if (!old) return old;
+
+        if (variables.ingredientId) {
+          // Toggle generated item
+          return {
+            ...old,
+            generated: old.generated.map((item) =>
+              item.ingredientId === variables.ingredientId
+                ? { ...item, checked: !item.checked }
+                : item,
+            ),
+          };
+        }
+        if (variables.customItemId) {
+          // Toggle custom item
+          return {
+            ...old,
+            custom: old.custom.map((item) =>
+              item.id === variables.customItemId
+                ? { ...item, checked: !item.checked }
+                : item,
+            ),
+          };
+        }
+        return old;
+      });
+
+      return { prev };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.prev) {
+        utils.shopping.getWeekList.setData({ weekStartDate }, context.prev);
+      }
+    },
+    onSettled: () => {
+      utils.shopping.getWeekList.invalidate({ weekStartDate });
+    },
+  });
+
+  const addCustomItemMutation = trpc.shopping.addCustomItem.useMutation({
+    onSuccess: () => {
+      utils.shopping.getWeekList.invalidate({ weekStartDate });
+      setCustomItemName("");
+      setCustomItemQuantity("");
+      setCustomItemUnit("");
+    },
+  });
+
+  const removeCustomItemMutation = trpc.shopping.removeCustomItem.useMutation({
+    onMutate: async (variables) => {
+      await utils.shopping.getWeekList.cancel({ weekStartDate });
+      const prev = utils.shopping.getWeekList.getData({ weekStartDate });
+
+      utils.shopping.getWeekList.setData({ weekStartDate }, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          custom: old.custom.filter(
+            (item) => item.id !== variables.customItemId,
+          ),
+        };
+      });
+
+      return { prev };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.prev) {
+        utils.shopping.getWeekList.setData({ weekStartDate }, context.prev);
+      }
+    },
+    onSettled: () => {
+      utils.shopping.getWeekList.invalidate({ weekStartDate });
+    },
+  });
+
+  const clearChecksMutation = trpc.shopping.clearChecks.useMutation({
+    onSuccess: () => {
+      utils.shopping.getWeekList.invalidate({ weekStartDate });
+    },
+  });
+
+  const handleToggleGenerated = (ingredientId: string) => {
+    toggleCheckedMutation.mutate({ weekStartDate, ingredientId });
+  };
+
+  const handleToggleCustom = (customItemId: string) => {
+    toggleCheckedMutation.mutate({ weekStartDate, customItemId });
+  };
+
+  const handleAddCustomItem = () => {
+    if (!customItemName.trim()) return;
+
+    const quantity = customItemQuantity
+      ? Number.parseFloat(customItemQuantity)
+      : undefined;
+
+    addCustomItemMutation.mutate({
+      weekStartDate,
+      name: customItemName.trim(),
+      quantity,
+      unit: customItemUnit.trim() || undefined,
+    });
+  };
+
+  const handleRemoveCustomItem = (customItemId: string) => {
+    removeCustomItemMutation.mutate({ customItemId });
   };
 
   const handleExportCSV = () => {
+    if (!shoppingData) return;
+
     let csv = "Category,Item,Quantity,Checked\n";
-    shoppingList.forEach((category) => {
-      category.items.forEach((item) => {
-        csv += `${category.category},"${item.name}",${item.quantity},${
-          item.checked ? "Yes" : "No"
-        }\n`;
-      });
+
+    // Generated items
+    shoppingData.generated.forEach((item) => {
+      const quantities = item.amounts
+        .map((a) => `${a.quantity} ${a.unit}`)
+        .join(" + ");
+      csv += `Generated,"${item.name}","${quantities}",${item.checked ? "Yes" : "No"}\n`;
+    });
+
+    // Custom items
+    shoppingData.custom.forEach((item) => {
+      const quantity =
+        item.quantity && item.unit
+          ? `${item.quantity} ${item.unit}`
+          : item.quantity
+            ? `${item.quantity}`
+            : "";
+      csv += `Custom,"${item.name}","${quantity}",${item.checked ? "Yes" : "No"}\n`;
     });
 
     const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "shopping-list.csv";
+    a.download = `shopping-list-${weekStartDate}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -112,29 +175,49 @@ export function ShoppingList() {
     window.print();
   };
 
-  const totalItems = shoppingList.reduce(
-    (acc, cat) => acc + cat.items.length,
-    0,
-  );
-  const checkedItems = shoppingList.reduce(
-    (acc, cat) => acc + cat.items.filter((item) => item.checked).length,
-    0,
-  );
+  if (!shoppingData) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-3xl">Shopping List</h2>
+          <p className="text-slate-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const totalItems = shoppingData.generated.length + shoppingData.custom.length;
+  const checkedItems =
+    shoppingData.generated.filter((i) => i.checked).length +
+    shoppingData.custom.filter((i) => i.checked).length;
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl">Shopping List</h2>
-        <p className="text-slate-500">Generated from your weekly meal plan</p>
+        <p className="text-slate-500">
+          Generated from your weekly meal plan (week of {weekStartDate})
+        </p>
       </div>
       <div className="flex gap-2">
-        <Button variant="outline" onClick={() => window.location.reload()}>
+        <Button
+          variant="outline"
+          onClick={() =>
+            utils.shopping.getWeekList.invalidate({ weekStartDate })
+          }
+        >
           <RefreshCw className="mr-2 h-4 w-4" />
-          Regenerate
+          Refresh
         </Button>
         <Button variant="outline" onClick={handleExportCSV}>
           <Download className="mr-2 h-4 w-4" />
           Export CSV
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => clearChecksMutation.mutate({ weekStartDate })}
+        >
+          Clear Checks
         </Button>
         <Button onClick={handlePrint} className="bg-rose-600 hover:bg-rose-700">
           Print List
@@ -142,72 +225,194 @@ export function ShoppingList() {
       </div>
 
       {/* Progress */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-slate-900">Shopping Progress</div>
-            <Badge variant="outline">
-              {checkedItems} / {totalItems} items
-            </Badge>
-          </div>
-          <div className="w-full bg-blue-200 rounded-full h-2">
-            <div
-              className="bg-blue-600 h-2 rounded-full transition-all"
-              style={{ width: `${(checkedItems / totalItems) * 100}%` }}
-            />
+      {totalItems > 0 && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-slate-900">Shopping Progress</div>
+              <Badge variant="outline">
+                {checkedItems} / {totalItems} items
+              </Badge>
+            </div>
+            <div className="w-full bg-blue-200 rounded-full h-2">
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all"
+                style={{
+                  width: `${totalItems > 0 ? (checkedItems / totalItems) * 100 : 0}%`,
+                }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Empty state */}
+      {totalItems === 0 && (
+        <Card>
+          <CardContent className="pt-6 text-center text-slate-400">
+            <p>
+              No items yet. Add recipes to your meal plan to generate a shopping
+              list.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Shopping List - Generated Items */}
+      {shoppingData.generated.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>From Your Meal Plan</span>
+              <Badge variant="outline">
+                {shoppingData.generated.filter((i) => i.checked).length} /{" "}
+                {shoppingData.generated.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {shoppingData.generated.map((item) => (
+                <div
+                  key={item.ingredientId}
+                  className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
+                >
+                  <Checkbox
+                    id={item.ingredientId}
+                    checked={item.checked}
+                    onCheckedChange={() =>
+                      handleToggleGenerated(item.ingredientId)
+                    }
+                  />
+                  <label
+                    htmlFor={item.ingredientId}
+                    className={`flex-1 cursor-pointer ${
+                      item.checked
+                        ? "line-through text-slate-400"
+                        : "text-slate-900"
+                    }`}
+                  >
+                    {item.name}
+                  </label>
+                  <div
+                    className={`text-sm ${item.checked ? "text-slate-400" : "text-slate-600"}`}
+                  >
+                    {item.amounts
+                      .map((a) => `${a.quantity} ${a.unit}`)
+                      .join(" + ")}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Shopping List - Custom Items */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Custom Items</span>
+            {shoppingData.custom.length > 0 && (
+              <Badge variant="outline">
+                {shoppingData.custom.filter((i) => i.checked).length} /{" "}
+                {shoppingData.custom.length}
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {/* Add custom item form */}
+            <div className="flex gap-2 p-3 bg-blue-50 rounded-lg border-2 border-dashed border-blue-200">
+              <Input
+                placeholder="Item name"
+                value={customItemName}
+                onChange={(e) => setCustomItemName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleAddCustomItem();
+                  }
+                }}
+              />
+              <Input
+                placeholder="Qty"
+                type="number"
+                step="0.01"
+                className="w-24"
+                value={customItemQuantity}
+                onChange={(e) => setCustomItemQuantity(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleAddCustomItem();
+                  }
+                }}
+              />
+              <Input
+                placeholder="Unit"
+                className="w-24"
+                value={customItemUnit}
+                onChange={(e) => setCustomItemUnit(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleAddCustomItem();
+                  }
+                }}
+              />
+              <Button onClick={handleAddCustomItem} size="sm">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Custom items list */}
+            {shoppingData.custom.length === 0 ? (
+              <p className="text-slate-400 text-sm text-center py-4">
+                No custom items yet. Add items above that aren't in your meal
+                plan.
+              </p>
+            ) : (
+              shoppingData.custom.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
+                >
+                  <Checkbox
+                    id={item.id}
+                    checked={item.checked}
+                    onCheckedChange={() => handleToggleCustom(item.id)}
+                  />
+                  <label
+                    htmlFor={item.id}
+                    className={`flex-1 cursor-pointer ${
+                      item.checked
+                        ? "line-through text-slate-400"
+                        : "text-slate-900"
+                    }`}
+                  >
+                    {item.name}
+                  </label>
+                  <div
+                    className={`text-sm ${item.checked ? "text-slate-400" : "text-slate-600"}`}
+                  >
+                    {item.quantity && item.unit
+                      ? `${item.quantity} ${item.unit}`
+                      : item.quantity
+                        ? `${item.quantity}`
+                        : ""}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveCustomItem(item.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
-
-      {/* Shopping List by Category */}
-      <div className="space-y-4">
-        {shoppingList.map((category, categoryIndex) => (
-          <Card key={category.category}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>{category.category}</span>
-                <Badge variant="outline">
-                  {category.items.filter((i) => i.checked).length} /{" "}
-                  {category.items.length}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {category.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
-                  >
-                    <Checkbox
-                      id={item.id}
-                      checked={item.checked}
-                      onCheckedChange={() =>
-                        handleToggleItem(categoryIndex, item.id)
-                      }
-                    />
-                    <label
-                      htmlFor={item.id}
-                      className={`flex-1 cursor-pointer ${
-                        item.checked
-                          ? "line-through text-slate-400"
-                          : "text-slate-900"
-                      }`}
-                    >
-                      {item.name}
-                    </label>
-                    <div
-                      className={`${item.checked ? "text-slate-400" : "text-slate-600"}`}
-                    >
-                      {item.quantity}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
 
       {/* Print Styles */}
       <style>{`

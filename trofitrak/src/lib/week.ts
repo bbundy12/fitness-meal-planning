@@ -29,7 +29,7 @@ export function toISODateOnly(date: Date): string {
  * Get day index from day name (0 = Monday, 6 = Sunday)
  */
 export function dayIndexFromName(
-  dayName: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun" | string
+  dayName: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun" | string,
 ): number {
   const map: Record<string, number> = {
     Mon: 0,
@@ -54,15 +54,15 @@ export function dayIndexFromName(
  * Get day name from index (0 = Monday, 6 = Sunday)
  */
 export function dayNameFromIndex(
-  index: number
+  index: number,
 ): "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun" {
   const names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
   return names[index % 7];
 }
 
 /**
- * Get the current week's start date (this Monday at UTC midnight)
+ * Get the current week's start date as YYYY-MM-DD (this Monday at UTC midnight)
  */
-export function getCurrentWeekStart(): Date {
-  return getWeekStartDate(new Date());
+export function getCurrentWeekStart(): string {
+  return toISODateOnly(getWeekStartDate(new Date()));
 }
